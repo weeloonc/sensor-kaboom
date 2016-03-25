@@ -111,7 +111,7 @@ public class ActivityDetection {
         double totalAcclRaw = getMagnitude(x, y, z);
         double totalAccl = smoother.pushValue(totalAcclRaw).getValue();
         
-        //System.out.println(totalAcclRaw + " " + totalAccl);
+        //System.out.println(totalAcclRaw + "\t" + totalAccl);
     }
 
     /** 
@@ -128,6 +128,12 @@ public class ActivityDetection {
                                          float y , 
                                          float z , 
                                          int accuracy ) {
+        
+        SensorSmoother smoother = sensorSmoothers.get(Sensor.TYPE_MAGNETIC_FIELD);
+        double totalStrengthRaw = getMagnitude(x, y, z);
+        double totalStrength = smoother.pushValue(totalStrengthRaw).getValue();
+        
+        //System.out.println(totalStrengthRaw + "\t" + totalStrength);
     }
 
     /** 
