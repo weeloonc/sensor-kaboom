@@ -106,6 +106,12 @@ public class ActivityDetection {
                                            float y , 
                                            float z , 
                                            int accuracy ) {
+        
+        SensorSmoother smoother = sensorSmoothers.get(Sensor.TYPE_LINEAR_ACCELERATION);
+        double totalAcclRaw = getMagnitude(x, y, z);
+        double totalAccl = smoother.pushValue(totalAcclRaw).getValue();
+        
+        //System.out.println(totalAcclRaw + " " + totalAccl);
     }
 
     /** 
@@ -226,38 +232,94 @@ public class ActivityDetection {
     /** To format the UNIX millis time as a human-readable string. */
     private static final SimpleDateFormat sdf = new SimpleDateFormat( "yyyy-MM-dd-h-mm-ssa" );
 
+    private Map<Integer, SensorSmoother> sensorSmoothers;
+
+    public ActivityDetection() {
+        sensorSmoothers = new HashMap<Integer, SensorSmoother>();
+        sensorSmoothers.put(Sensor.TYPE_LINEAR_ACCELERATION, new SensorSmoother(SensorSmoother.WINDOW_SIZE_SMALL));
+        sensorSmoothers.put(Sensor.TYPE_MAGNETIC_FIELD, new SensorSmoother(SensorSmoother.WINDOW_SIZE_SMALL));
+    }
+
+    private double getMagnitude(double... tuple) {
+        
+        double sumOfSquares = 0.0;
+        
+        for (double value : tuple) {
+            sumOfSquares += value * value;
+        }
+        
+        return Math.sqrt(sumOfSquares);
+    }
+
     // Dummy variables used in the dummy timer code example
     private boolean isFirstAcclReading = true;
     private boolean isUserOutside = false;
     private int numberTimers = 1;
     private Runnable task = new Runnable() {
-            public void run() {
+        public void run() {
 
-                // Logging to the DDMS (in the simulator, the DDMS log is to the console)
-                System.out.println();
-                Log.i( "ActivitySim" , "Timer " + numberTimers + ": Current simulator time: " + 
-                       convertUnixTimeToReadableString( ActivitySimulator.currentTimeMillis() ) );
-                System.out.println( "Timer " + numberTimers + ": Current simulator time: " + 
-                                    convertUnixTimeToReadableString( ActivitySimulator.currentTimeMillis() ) );
+            // Logging to the DDMS (in the simulator, the DDMS log is to the console)
+            System.out.println();
+            Log.i( "ActivitySim" , "Timer " + numberTimers + ": Current simulator time: " + 
+                   convertUnixTimeToReadableString( ActivitySimulator.currentTimeMillis() ) );
+            System.out.println( "Timer " + numberTimers + ": Current simulator time: " + 
+                                convertUnixTimeToReadableString( ActivitySimulator.currentTimeMillis() ) );
 
-                // Dummy example of outputting a detected activity 
-                //  (to the file "DetectedActivities.txt" in the trace folder).
-                //  (here we just alternate between indoor and walking every 10 min)
-                if( ! isUserOutside ) {
-                    ActivitySimulator.outputDetectedActivity( UserActivities.IDLE_INDOOR );
-                }
-                else {
-                    ActivitySimulator.outputDetectedActivity( UserActivities.WALKING );
-                }
-                isUserOutside = !isUserOutside;
-
-                // Set a second timer to execute the same task 10 min later
-                ++numberTimers;
-                if( numberTimers <= 2 ) { 
-                    SimulatorTimer timer = new SimulatorTimer();
-                    timer.schedule( task ,             // Task to be executed
-                                    10 * 60 * 1000 );  // Delay in millisec (10 min)
-                }
+            // Dummy example of outputting a detected activity 
+            //  (to the file "DetectedActivities.txt" in the trace folder).
+            //  (here we just alternate between indoor and walking every 10 min)
+            if( ! isUserOutside ) {
+                ActivitySimulator.outputDetectedActivity( UserActivities.IDLE_INDOOR );
             }
-        };
+            else {
+                ActivitySimulator.outputDetectedActivity( UserActivities.WALKING );
+            }
+            isUserOutside = !isUserOutside;
+
+            // Set a second timer to execute the same task 10 min later
+            ++numberTimers;
+            if( numberTimers <= 2 ) { 
+                SimulatorTimer timer = new SimulatorTimer();
+                timer.schedule( task ,             // Task to be executed
+                                10 * 60 * 1000 );  // Delay in millisec (10 min)
+            }
+        }
+    };
+
+    public class SensorSmoother {
+        
+        public static final int WINDOW_SIZE_SMALL = 5;
+        public static final int WINDOW_SIZE_MEDIUM = 10;
+        public static final int WINDOW_SIZE_LARGE = 20;
+        
+        private double[] window;
+        private double total;
+        private int index;
+        private int count;
+        
+        public SensorSmoother(int windowSize) {
+            window = new double[windowSize];
+        }
+        
+        public SensorSmoother pushValue(double value) {
+            
+            total = total - window[index] + value;
+            window[index] = value;
+            
+            if (count < window.length) {
+                count++;
+            }
+            
+            index = ++index % window.length;
+            
+            return this;
+        }
+        
+        public double getValue() {
+            double average = total / count;
+            return average;
+        }
+        
+    }
+
 }
