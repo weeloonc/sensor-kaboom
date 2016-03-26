@@ -107,9 +107,13 @@ public class ActivityDetection {
                                            float z , 
                                            int accuracy ) {
         
-        SensorSmoother smoother = sensorSmoothers.get(Sensor.TYPE_LINEAR_ACCELERATION);
-        double totalAcclRaw = getMagnitude(x, y, z);
-        double totalAccl = smoother.pushValue(totalAcclRaw).getValue();
+        double totalRaw = getMagnitude(x, y, z);
+        
+        EventWindow sWindow = sEventWindows.get(Sensor.TYPE_LINEAR_ACCELERATION);
+        double total = sWindow.pushValue(totalRaw).getMean();
+        
+        EventWindow xlWindow = xlEventWindows.get(Sensor.TYPE_LINEAR_ACCELERATION);
+        double stdDev = xlWindow.pushValue(totalRaw).getStdDevP();
         
         //System.out.println(totalAcclRaw + "\t" + totalAccl);
     }
@@ -128,10 +132,15 @@ public class ActivityDetection {
                                          float y , 
                                          float z , 
                                          int accuracy ) {
+
+        double totalRaw = getMagnitude(x, y, z);
+        double totalHp = magHighPass.pushValue(totalRaw).getValue();
         
-        SensorSmoother smoother = sensorSmoothers.get(Sensor.TYPE_MAGNETIC_FIELD);
-        double totalStrengthRaw = getMagnitude(x, y, z);
-        double totalStrength = smoother.pushValue(totalStrengthRaw).getValue();
+        EventWindow sWindow = sEventWindows.get(Sensor.TYPE_MAGNETIC_FIELD);
+        double total = sWindow.pushValue(totalHp).getMean();
+        
+        EventWindow xlWindow = sEventWindows.get(Sensor.TYPE_MAGNETIC_FIELD);
+        double stdDev = xlWindow.pushValue(totalHp).getMean();
         
         //System.out.println(totalStrengthRaw + "\t" + totalStrength);
     }
@@ -238,12 +247,19 @@ public class ActivityDetection {
     /** To format the UNIX millis time as a human-readable string. */
     private static final SimpleDateFormat sdf = new SimpleDateFormat( "yyyy-MM-dd-h-mm-ssa" );
 
-    private Map<Integer, SensorSmoother> sensorSmoothers;
+    private Map<Integer, EventWindow> sEventWindows;
+    private Map<Integer, EventWindow> xlEventWindows;
+    private HighPass magHighPass;
 
     public ActivityDetection() {
-        sensorSmoothers = new HashMap<Integer, SensorSmoother>();
-        sensorSmoothers.put(Sensor.TYPE_LINEAR_ACCELERATION, new SensorSmoother(SensorSmoother.WINDOW_SIZE_SMALL));
-        sensorSmoothers.put(Sensor.TYPE_MAGNETIC_FIELD, new SensorSmoother(SensorSmoother.WINDOW_SIZE_SMALL));
+        
+        sEventWindows = new HashMap<Integer, EventWindow>();
+        sEventWindows.put(Sensor.TYPE_LINEAR_ACCELERATION, new EventWindow(EventWindow.WINDOW_SIZE_SMALL));
+        sEventWindows.put(Sensor.TYPE_MAGNETIC_FIELD, new EventWindow(EventWindow.WINDOW_SIZE_SMALL));
+        
+        xlEventWindows = new HashMap<Integer, EventWindow>();
+        xlEventWindows.put(Sensor.TYPE_LINEAR_ACCELERATION, new EventWindow(EventWindow.WINDOW_SIZE_XLARGE));
+        xlEventWindows.put(Sensor.TYPE_MAGNETIC_FIELD, new EventWindow(EventWindow.WINDOW_SIZE_XLARGE));
     }
 
     private double getMagnitude(double... tuple) {
@@ -292,22 +308,23 @@ public class ActivityDetection {
         }
     };
 
-    public class SensorSmoother {
+    public class EventWindow {
         
         public static final int WINDOW_SIZE_SMALL = 5;
         public static final int WINDOW_SIZE_MEDIUM = 10;
         public static final int WINDOW_SIZE_LARGE = 20;
+        public static final int WINDOW_SIZE_XLARGE = 40;
         
         private double[] window;
         private double total;
         private int index;
         private int count;
         
-        public SensorSmoother(int windowSize) {
-            window = new double[windowSize];
+        public EventWindow(int size) {
+            window = new double[size];
         }
         
-        public SensorSmoother pushValue(double value) {
+        public EventWindow pushValue(double value) {
             
             total = total - window[index] + value;
             window[index] = value;
@@ -321,9 +338,51 @@ public class ActivityDetection {
             return this;
         }
         
+        public double getMean() {
+            double mean = total / count;
+            return mean;
+        }
+        
+        public double getStdDevP() {
+            
+            double mean = getMean();
+            double diff = 0.0;
+            double diffSq = 0.0;
+            double diffSqSum = 0.0;
+            
+            for (int i = 0; i < count; i++) {
+                diff = window[i] - mean;
+                diffSq = diff * diff;
+                diffSqSum += diffSq;
+            }
+            
+            double stdDev = Math.sqrt(diffSqSum / count);
+            
+            return stdDev;
+        }
+        
+    }
+
+    public class HighPass {
+        
+        private double alpha;
+        private double filteredValue;
+        private double lastValue;
+        
+        public HighPass(double alpha) {
+            this.alpha = alpha;
+        }
+        
+        public HighPass pushValue(double value) {
+            
+            filteredValue = alpha * (filteredValue + value - lastValue);
+            lastValue = value;
+            
+            return this;
+        }
+        
         public double getValue() {
-            double average = total / count;
-            return average;
+            return filteredValue;
         }
         
     }
