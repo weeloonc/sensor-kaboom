@@ -115,7 +115,7 @@ public class ActivityDetection {
         EventWindow xlWindow = xlEventWindows.get(Sensor.TYPE_LINEAR_ACCELERATION);
         double stdDev = xlWindow.pushValue(totalRaw).getStdDevP();
         
-        //System.out.println(totalAcclRaw + "\t" + totalAccl);
+        System.out.println(totalRaw + "\t" + stdDev);
     }
 
     /** 
@@ -260,6 +260,8 @@ public class ActivityDetection {
         xlEventWindows = new HashMap<Integer, EventWindow>();
         xlEventWindows.put(Sensor.TYPE_LINEAR_ACCELERATION, new EventWindow(EventWindow.WINDOW_SIZE_XLARGE));
         xlEventWindows.put(Sensor.TYPE_MAGNETIC_FIELD, new EventWindow(EventWindow.WINDOW_SIZE_XLARGE));
+        
+        magHighPass = new HighPass(0.8);
     }
 
     private double getMagnitude(double... tuple) {
