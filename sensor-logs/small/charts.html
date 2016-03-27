@@ -7,7 +7,7 @@
 
 $(document).ready(function () {
     var striplines = [];
-   
+   var window = 1000;
     var hashActivity = {
 BUS:"green",
 WALKING:"purple",
@@ -65,7 +65,15 @@ OTHER: "pink",
         success: function (data) { processLocData(data); }
     });
 
-     function enQueue(queue, val, window){ 
+    $.ajax({
+        type: "GET",
+        url: "Gyro.txt",
+        dataType: "text",
+        success: function (data) { processGravData(data); }
+    });
+
+
+    function enQueue(queue, val, window){
         if(queue.length < window){
             queue.push(val);
         }else {
@@ -99,13 +107,13 @@ OTHER: "pink",
                 var rowData = allLinesArray[i].split(',');
                 if(rowData && rowData.length > 1){
 
-                    filteredData = lowPass([parseFloat(rowData[2]), parseFloat(rowData[3]), parseFloat(rowData[4])], filteredData);
+                    filteredData = highPass([parseFloat(rowData[2]), parseFloat(rowData[3]), parseFloat(rowData[4])], filteredData);
                    
                     //magnitude = Math.sqrt(Math.pow(rowData[2],2) +  Math.pow(rowData[3],2) +  Math.pow(rowData[4],2) );
                     magnitude = Math.sqrt(Math.pow(filteredData[0],2) +  Math.pow(filteredData[1],2) +  Math.pow(filteredData[2],2) );
                     magnitudeDataPoints.push({ x: new Date(rowData[1]*1), y: magnitude});
-                    enQueue(meanQueue, magnitude, 50);
-                    enQueue(stdDevQueue, magnitude  , 50);
+                    enQueue(meanQueue, magnitude, window);
+                    enQueue(stdDevQueue, magnitude  , window);
                     meanDataPoints.push({ x: new Date(rowData[1]*1), y: math.mean(meanQueue)});
                     stdDevDatapoints.push({ x: new Date(rowData[1]*1), y: math.std(stdDevQueue)});
                     currentState = lastState;
@@ -140,6 +148,14 @@ OTHER: "pink",
         }
     }
     var ALPHA = 0.15;
+
+    function highPass(input, output) {
+        if ( output.length === 0 ) return input;
+        for ( i=0; i<input.length; i++ ) {
+            output[i] = input[i] - (output[i] + ALPHA * (input[i] - output[i]));
+        }
+        return(output);
+    }
     function lowPass(input, output){
 
         if ( output.length === 0 ) { return input; }    
@@ -164,8 +180,8 @@ OTHER: "pink",
                     magnitudeDataPoints.push({ x: new Date(rowData[1]*1), y: magnitude});
                    // magnitudeDataPoints.push({ x: new Date(rowData[1]*1), y:Math.sqrt(Math.pow(rowData[2],2) +  Math.pow(rowData[3],2) +  Math.pow(rowData[4],2) )});
                 }
-                enQueue(meanQueue, magnitude, 50);
-                enQueue(stdDevQueue, magnitude  , 50);
+                enQueue(meanQueue, magnitude, window);
+                enQueue(stdDevQueue, magnitude  , window);
                 meanDataPoints.push({ x: new Date(rowData[1]*1), y: math.mean(meanQueue)});
                 stdDevDatapoints.push({ x: new Date(rowData[1]*1), y: math.std(stdDevQueue)});    
             }
@@ -193,6 +209,22 @@ OTHER: "pink",
             GravChart.options.axisX.stripLines = striplines;
             GravChart.render();
           
+        }
+    }
+
+    function processGravData(allText) {
+        var allLinesArray = allText.split('\n');
+        if (allLinesArray.length > 0) {
+            var dataPoints = [];
+            for (var i = 0; i <= allLinesArray.length - 1; i++) {
+                var rowData = allLinesArray[i].split(',');
+                if(rowData && rowData.length > 1)
+                    dataPoints.push({ x: new Date(rowData[1]*1), y:Math.sqrt(Math.pow(rowData[2],2) +  Math.pow(rowData[3],2) +  Math.pow(rowData[4],2) )});
+            }
+            GyroChart.options.data[0].dataPoints = dataPoints;
+            GyroChart.options.axisX.stripLines = striplines;
+            GyroChart.render();
+
         }
     }
 
@@ -324,6 +356,24 @@ OTHER: "pink",
         ]
     });
 
+    var GyroChart = new CanvasJS.Chart("GyroChart", {
+        // animationEnabled: true,
+        zoomEnabled: true,
+        theme: "theme2",
+        title: {
+            text: "Gyro graph"
+        },
+        axisX:{
+            stripLines:[]
+        },
+        data: [
+            {
+                type: "spline",
+                dataPoints: []
+            }
+        ]
+    });
+
     var GravChart = new CanvasJS.Chart("GravChart", {
        // animationEnabled: true,
         zoomEnabled: true,
@@ -435,6 +485,8 @@ OTHER: "pink",
 <div id="AcclChart" style="height: 300px; width: 100%;"></div>
 <div id="MagChart" style="height: 300px; width: 100%;"></div>
 <div id="GravChart" style="height: 300px; width: 100%;"></div>
+
+<div id="GyroChart" style="height: 300px; width: 100%;"></div>
 <div id="LightChart" style="height: 300px; width: 100%;"></div>
 <div id="PressureChart" style="height: 300px; width: 100%;"></div>
 <div id="AltitudeChart" style="height: 300px; width: 100%;"></div>
