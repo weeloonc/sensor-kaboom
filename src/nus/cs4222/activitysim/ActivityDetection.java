@@ -65,15 +65,6 @@ public class ActivityDetection {
         // You will most likely not need to use Timers at all, it is just 
         //  provided for convenience if you require.
 
-        // Here, we just show a dummy example of creating a timer 
-        //  to execute a task 10 minutes later.
-        // Be careful not to create too many timers!
-        if( isFirstAcclReading ) {
-            isFirstAcclReading = false;
-            SimulatorTimer timer = new SimulatorTimer();
-            timer.schedule( this.task ,        // Task to be executed
-                            10 * 60 * 1000 );  // Delay in millisec (10 min)
-        }
     }
 
     /** 
@@ -107,15 +98,31 @@ public class ActivityDetection {
                                            float z , 
                                            int accuracy ) {
         
-        double totalRaw = getMagnitude(x, y, z);
+        double valueRaw = getMagnitude(x, y, z);
         
         EventWindow sWindow = sEventWindows.get(Sensor.TYPE_LINEAR_ACCELERATION);
-        double total = sWindow.pushValue(totalRaw).getMean();
+        double value = sWindow.pushValue(valueRaw).getMean();
         
         EventWindow xlWindow = xlEventWindows.get(Sensor.TYPE_LINEAR_ACCELERATION);
-        double stdDev = xlWindow.pushValue(totalRaw).getStdDevP();
+        double stdDev = xlWindow.pushValue(valueRaw).getStdDevP();
         
-        System.out.println(totalRaw + "\t" + stdDev);
+        if (value < 1.5) {
+            oracle.setSensorActivity(Sensor.TYPE_LINEAR_ACCELERATION, ActivityOracle.SENSOR_ACTIVITY_LOW);
+        }
+        else if (stdDev < 1.0) {
+            oracle.setSensorActivity(Sensor.TYPE_LINEAR_ACCELERATION, ActivityOracle.SENSOR_ACTIVITY_MID);
+        }
+        else {
+            oracle.setSensorActivity(Sensor.TYPE_LINEAR_ACCELERATION, ActivityOracle.SENSOR_ACTIVITY_HIGH);
+        }
+
+        oracle.pushActivityState(oracle.evaluateUserActivity());
+        UserActivities newState = oracle.predictActivityState();
+        
+        if (newState != UserActivities.INCORRECT) {
+            ActivitySimulator.outputDetectedActivity(newState);
+        }
+        //System.out.println(totalRaw + "\t" + stdDev);
     }
 
     /** 
@@ -133,16 +140,31 @@ public class ActivityDetection {
                                          float z , 
                                          int accuracy ) {
 
-        double totalRaw = getMagnitude(x, y, z);
-        double totalHp = magHighPass.pushValue(totalRaw).getValue();
+        double valueRaw = getMagnitude(x, y, z);
         
         EventWindow sWindow = sEventWindows.get(Sensor.TYPE_MAGNETIC_FIELD);
-        double total = sWindow.pushValue(totalHp).getMean();
+        double value = sWindow.pushValue(valueRaw).getMean();
         
-        EventWindow xlWindow = sEventWindows.get(Sensor.TYPE_MAGNETIC_FIELD);
-        double stdDev = xlWindow.pushValue(totalHp).getMean();
+        //EventWindow xlWindow = xlEventWindows.get(Sensor.TYPE_MAGNETIC_FIELD);
+        double stdDev = xxlMagEventWindow.pushValue(valueRaw).getStdDevP();
         
-        //System.out.println(totalStrengthRaw + "\t" + totalStrength);
+        if (stdDev < 0.5) {
+            oracle.setSensorActivity(Sensor.TYPE_MAGNETIC_FIELD, ActivityOracle.SENSOR_ACTIVITY_LOW);
+        }
+        else if (stdDev < 2.0) {
+            oracle.setSensorActivity(Sensor.TYPE_MAGNETIC_FIELD, ActivityOracle.SENSOR_ACTIVITY_MID);
+        }
+        else {
+            oracle.setSensorActivity(Sensor.TYPE_MAGNETIC_FIELD, ActivityOracle.SENSOR_ACTIVITY_HIGH);
+        }
+        
+        //UserActivities newState = oracle.predictActivityState();
+        
+        //if (newState != UserActivities.INCORRECT) {
+        //    ActivitySimulator.outputDetectedActivity(newState);
+        //}
+        
+        //System.out.println(totalRaw + "\t" + stdDev);
     }
 
     /** 
@@ -247,11 +269,14 @@ public class ActivityDetection {
     /** To format the UNIX millis time as a human-readable string. */
     private static final SimpleDateFormat sdf = new SimpleDateFormat( "yyyy-MM-dd-h-mm-ssa" );
 
+    private ActivityOracle oracle; 
     private Map<Integer, EventWindow> sEventWindows;
     private Map<Integer, EventWindow> xlEventWindows;
-    private HighPass magHighPass;
+    private EventWindow xxlMagEventWindow;
 
     public ActivityDetection() {
+        
+        oracle = new ActivityOracle(1200); // stores past 30 sec activity for eval
         
         sEventWindows = new HashMap<Integer, EventWindow>();
         sEventWindows.put(Sensor.TYPE_LINEAR_ACCELERATION, new EventWindow(EventWindow.WINDOW_SIZE_SMALL));
@@ -261,7 +286,7 @@ public class ActivityDetection {
         xlEventWindows.put(Sensor.TYPE_LINEAR_ACCELERATION, new EventWindow(EventWindow.WINDOW_SIZE_XLARGE));
         xlEventWindows.put(Sensor.TYPE_MAGNETIC_FIELD, new EventWindow(EventWindow.WINDOW_SIZE_XLARGE));
         
-        magHighPass = new HighPass(0.8);
+        xxlMagEventWindow = new EventWindow(80);
     }
 
     private double getMagnitude(double... tuple) {
@@ -274,41 +299,6 @@ public class ActivityDetection {
         
         return Math.sqrt(sumOfSquares);
     }
-
-    // Dummy variables used in the dummy timer code example
-    private boolean isFirstAcclReading = true;
-    private boolean isUserOutside = false;
-    private int numberTimers = 1;
-    private Runnable task = new Runnable() {
-        public void run() {
-
-            // Logging to the DDMS (in the simulator, the DDMS log is to the console)
-            System.out.println();
-            Log.i( "ActivitySim" , "Timer " + numberTimers + ": Current simulator time: " + 
-                   convertUnixTimeToReadableString( ActivitySimulator.currentTimeMillis() ) );
-            System.out.println( "Timer " + numberTimers + ": Current simulator time: " + 
-                                convertUnixTimeToReadableString( ActivitySimulator.currentTimeMillis() ) );
-
-            // Dummy example of outputting a detected activity 
-            //  (to the file "DetectedActivities.txt" in the trace folder).
-            //  (here we just alternate between indoor and walking every 10 min)
-            if( ! isUserOutside ) {
-                ActivitySimulator.outputDetectedActivity( UserActivities.IDLE_INDOOR );
-            }
-            else {
-                ActivitySimulator.outputDetectedActivity( UserActivities.WALKING );
-            }
-            isUserOutside = !isUserOutside;
-
-            // Set a second timer to execute the same task 10 min later
-            ++numberTimers;
-            if( numberTimers <= 2 ) { 
-                SimulatorTimer timer = new SimulatorTimer();
-                timer.schedule( task ,             // Task to be executed
-                                10 * 60 * 1000 );  // Delay in millisec (10 min)
-            }
-        }
-    };
 
     public class EventWindow {
         
@@ -361,6 +351,148 @@ public class ActivityDetection {
             double stdDev = Math.sqrt(diffSqSum / count);
             
             return stdDev;
+        }
+        
+    }
+
+    public class ActivityOracle {
+        
+        public static final int SENSOR_ACTIVITY_LOW = 0;
+        public static final int SENSOR_ACTIVITY_MID = 1;
+        public static final int SENSOR_ACTIVITY_HIGH = 2;
+        
+        private UserActivities[] window;
+        private int index;
+        private int stateCount;
+        private int idleCount;
+        private int walkingCount;
+        private int vehicleCount;
+        private int otherCount;
+        
+        private Map<Integer, Integer> sensorActivities;
+        
+        private int confidenceThreshold;
+        private FileLogger log;
+        
+        public ActivityOracle(int windowSize) {
+            sensorActivities = new HashMap<Integer, Integer>();
+            sensorActivities.put(Sensor.TYPE_LINEAR_ACCELERATION, 0);
+            sensorActivities.put(Sensor.TYPE_MAGNETIC_FIELD, 0);
+            window = new UserActivities[windowSize];
+            confidenceThreshold = (int) (0.85 * windowSize);
+            log = new FileLogger();
+            try {
+                log.openLogFile(new File("sensor-logs"), new Date().toString() + "_oracle.csv");
+            } catch (Exception e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+        }
+        
+        public void setSensorActivity(int sensorType, int sensorActivity) {
+            sensorActivities.put(sensorType, sensorActivity);
+        }
+        
+        public UserActivities evaluateUserActivity() {
+            
+            boolean isIdle = sensorActivities.get(Sensor.TYPE_LINEAR_ACCELERATION) <= SENSOR_ACTIVITY_MID
+                    && sensorActivities.get(Sensor.TYPE_MAGNETIC_FIELD) == SENSOR_ACTIVITY_LOW;
+            
+            boolean isWalking = sensorActivities.get(Sensor.TYPE_LINEAR_ACCELERATION) == SENSOR_ACTIVITY_HIGH;
+            
+            boolean isVehicle = sensorActivities.get(Sensor.TYPE_LINEAR_ACCELERATION) <= SENSOR_ACTIVITY_MID
+                    && sensorActivities.get(Sensor.TYPE_MAGNETIC_FIELD) >= SENSOR_ACTIVITY_MID;
+            
+            if (isIdle) {
+                return UserActivities.IDLE_INDOOR;
+            }
+            else if (isWalking) {
+                return UserActivities.WALKING;
+            }
+            else if (isVehicle) {
+                return UserActivities.CAR;
+            }
+            else {
+                return UserActivities.OTHER;
+            }
+        }
+        
+        public void pushActivityState(UserActivities state) {
+            
+            UserActivities purgedState = null;
+            
+            if (stateCount < window.length) {
+                stateCount++;
+            }
+            else {
+                purgedState = window[index];
+            }
+            
+            window[index] = state;
+            index = ++index % window.length;
+            
+            if (purgedState != null) {
+                switch (purgedState) {
+                case IDLE_INDOOR:
+                case IDLE_OUTDOOR:
+                    idleCount--;
+                    break;
+                case WALKING:
+                    walkingCount--;
+                    break;
+                case BUS:
+                case CAR:
+                case TRAIN:
+                    vehicleCount--;
+                    break;
+                case OTHER:
+                    otherCount--;
+                    break;
+                default:
+                    throw new AssertionError("Should not happen");
+                }
+            }
+            
+            switch (state) {
+            case IDLE_INDOOR:
+            case IDLE_OUTDOOR:
+                idleCount++;
+                break;
+            case WALKING:
+                walkingCount++;
+                break;
+            case BUS:
+            case CAR:
+            case TRAIN:
+                vehicleCount++;
+                break;
+            case OTHER:
+                otherCount++;
+                break;
+            default:
+                throw new AssertionError("Should not happen");
+            }
+            
+            log.logEvent(idleCount + "," + walkingCount + "," + vehicleCount);
+        }
+        
+        public UserActivities predictActivityState() {
+            
+            if (idleCount > confidenceThreshold) {
+                return UserActivities.IDLE_INDOOR;
+            }
+            else if (walkingCount > confidenceThreshold) {
+                return UserActivities.WALKING;
+            }
+            else if (vehicleCount > confidenceThreshold) {
+                return UserActivities.CAR;
+            }
+            else if (otherCount > confidenceThreshold) {
+                return UserActivities.OTHER;
+            }
+            else { // no confidence to predict
+                return UserActivities.INCORRECT;
+            }
         }
         
     }
