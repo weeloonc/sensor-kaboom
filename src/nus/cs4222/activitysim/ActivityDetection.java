@@ -382,7 +382,7 @@ public class ActivityDetection {
             confidenceThreshold = (int) (0.85 * windowSize);
             log = new FileLogger();
             try {
-                log.openLogFile(new File("sensor-logs"), new Date().toString() + "_oracle.csv");
+                log.openLogFile(new File("sensor-logs/"), new Date().getTime() + "_oracle.csv");
             } catch (Exception e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
