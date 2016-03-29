@@ -5,6 +5,7 @@ import java.util.*;
 import java.text.*;
 
 import android.hardware.*;
+import android.location.LocationManager;
 import android.util.*;
 
 /**
@@ -159,10 +160,10 @@ public class ActivityDetection {
 		}
 
 		//Light detector
-		if(value <= 52.3){
+		if(stdDev <= 1.0){
 			ioDetector.setLightActivity(Sensor.TYPE_MAGNETIC_FIELD, IODetector.LIGHTSENSOR_ACTIVITY_LOW );
 		}
-		else if(value > 52.3){
+		else if(stdDev > 1.0){
 			ioDetector.setLightActivity(Sensor.TYPE_MAGNETIC_FIELD, IODetector.LIGHTSENSOR_ACTIVITY_HIGH );
 		}
 
@@ -282,6 +283,13 @@ public class ActivityDetection {
        @param   speed        Speed (m/sec) (may be -1 if unavailable)
 	 */
 	private boolean isGPS = false;
+	private LocationManager locationManager;
+
+	public static final int GPS_SPEED_LOW = 0; //below 10 - walking
+	public static final int GPS_SPEED_MEDIUM = 1; //below 60 - train
+	public static final int GPS_SPEED_HIGH = 2; //Above 60 - car
+
+
 	public void onLocationSensorChanged( long timestamp , 
 			String provider , 
 			double latitude , 
@@ -290,11 +298,21 @@ public class ActivityDetection {
 			double altitude , 
 			float bearing , 
 			float speed ) {
-		
-		if(provider.equals("gps")){
+		locationManager = new LocationManager();
+
+		if(provider.equals(locationManager.GPS_PROVIDER)){
 			isGPS = true;
 		}else isGPS = false;
-		
+
+		float speedKM = speed * 18 / 5;
+		if(speedKM <= 10){
+			ioDetector.setLightActivity(IODetector.LocationSensor, GPS_SPEED_LOW );
+		}else if (speedKM <= 60){
+			ioDetector.setLightActivity(IODetector.LocationSensor, GPS_SPEED_MEDIUM );
+		}else if (speedKM > 60 ){
+			ioDetector.setLightActivity(IODetector.LocationSensor, GPS_SPEED_HIGH);
+		}
+
 	}
 
 	/** Helper method to convert UNIX millis time into a human-readable string. */
@@ -320,7 +338,7 @@ public class ActivityDetection {
 		sEventWindows = new HashMap<Integer, EventWindow>();
 		sEventWindows.put(Sensor.TYPE_LINEAR_ACCELERATION, new EventWindow(EventWindow.WINDOW_SIZE_SMALL));
 		sEventWindows.put(Sensor.TYPE_MAGNETIC_FIELD, new EventWindow(EventWindow.WINDOW_SIZE_SMALL));
-		
+
 
 		xlEventWindows = new HashMap<Integer, EventWindow>();
 		xlEventWindows.put(Sensor.TYPE_LINEAR_ACCELERATION, new EventWindow(EventWindow.WINDOW_SIZE_XLARGE));
@@ -574,9 +592,11 @@ public class ActivityDetection {
 
 		public static final int PROXIMITY_LOW = 0;
 		public static final int PROXIMITY_HIGH = 1;
-		
+
 		public static final int GPS_SIGNAL_HIGH = 1;
 		public static final int GPS_SIGNAL_LOW = 0;
+
+		public static final int LocationSensor = 99;
 
 		private Map<Integer, Integer> lightActivity;
 
@@ -585,6 +605,7 @@ public class ActivityDetection {
 			lightActivity.put(Sensor.TYPE_LIGHT, 0);
 			lightActivity.put(Sensor.TYPE_MAGNETIC_FIELD, 0);
 			lightActivity.put(Sensor.TYPE_PROXIMITY, 0);
+			lightActivity.put(LocationSensor,0);
 		}
 		public void setLightActivity(int sensorType, int value){
 			lightActivity.put(sensorType, value);
@@ -596,12 +617,13 @@ public class ActivityDetection {
 				isOutdoor = lightActivity.get(Sensor.TYPE_LIGHT) == LIGHTSENSOR_ACTIVITY_HIGH;
 				if(isOutdoor && isGPS)return UserActivities.IDLE_OUTDOOR;
 			}
-			if((lightActivity.get(Sensor.TYPE_MAGNETIC_FIELD) == LIGHTSENSOR_ACTIVITY_HIGH)&& isGPS){
+			if((lightActivity.get(Sensor.TYPE_MAGNETIC_FIELD) == LIGHTSENSOR_ACTIVITY_LOW)&& isGPS
+					&& lightActivity.get(LocationSensor) == GPS_SPEED_LOW ){
 				return UserActivities.IDLE_OUTDOOR;
-			}else if((lightActivity.get(Sensor.TYPE_MAGNETIC_FIELD) == LIGHTSENSOR_ACTIVITY_LOW)&& !isGPS)
+			}else if((lightActivity.get(Sensor.TYPE_MAGNETIC_FIELD) == LIGHTSENSOR_ACTIVITY_HIGH)&& !isGPS
+					&& lightActivity.get(LocationSensor) == GPS_SPEED_LOW)
 				return UserActivities.IDLE_INDOOR;
 			else return UserActivities.INCORRECT;
-
 		}
 
 		//on Proximity change, tells IODetector to read from LightSensor
