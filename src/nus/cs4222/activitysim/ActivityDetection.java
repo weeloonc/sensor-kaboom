@@ -281,6 +281,7 @@ public class ActivityDetection {
        @param   bearing      Bearing (deg) (may be -1 if unavailable)
        @param   speed        Speed (m/sec) (may be -1 if unavailable)
 	 */
+	private boolean isGPS = false;
 	public void onLocationSensorChanged( long timestamp , 
 			String provider , 
 			double latitude , 
@@ -289,6 +290,11 @@ public class ActivityDetection {
 			double altitude , 
 			float bearing , 
 			float speed ) {
+		
+		if(provider.equals("gps")){
+			isGPS = true;
+		}else isGPS = false;
+		
 	}
 
 	/** Helper method to convert UNIX millis time into a human-readable string. */
@@ -568,6 +574,9 @@ public class ActivityDetection {
 
 		public static final int PROXIMITY_LOW = 0;
 		public static final int PROXIMITY_HIGH = 1;
+		
+		public static final int GPS_SIGNAL_HIGH = 1;
+		public static final int GPS_SIGNAL_LOW = 0;
 
 		private Map<Integer, Integer> lightActivity;
 
@@ -585,12 +594,13 @@ public class ActivityDetection {
 			boolean isIndoor, isOutdoor;
 			if(lightActivity.get(Sensor.TYPE_PROXIMITY) == PROXIMITY_HIGH){
 				isOutdoor = lightActivity.get(Sensor.TYPE_LIGHT) == LIGHTSENSOR_ACTIVITY_HIGH;
-				if(isOutdoor)return UserActivities.IDLE_OUTDOOR;
+				if(isOutdoor && isGPS)return UserActivities.IDLE_OUTDOOR;
 			}
-			if(lightActivity.get(Sensor.TYPE_MAGNETIC_FIELD) == LIGHTSENSOR_ACTIVITY_HIGH){
+			if((lightActivity.get(Sensor.TYPE_MAGNETIC_FIELD) == LIGHTSENSOR_ACTIVITY_HIGH)&& isGPS){
 				return UserActivities.IDLE_OUTDOOR;
-			}else
+			}else if((lightActivity.get(Sensor.TYPE_MAGNETIC_FIELD) == LIGHTSENSOR_ACTIVITY_LOW)&& !isGPS)
 				return UserActivities.IDLE_INDOOR;
+			else return UserActivities.INCORRECT;
 
 		}
 
