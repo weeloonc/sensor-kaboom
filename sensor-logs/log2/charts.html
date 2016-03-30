@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.js"></script>
+    <script  type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/3.0.0/math.min.js"></script>
+    <script type="text/javascript">
+
+        $(document).ready(function () {
+            var striplines = [];
+
+            var hashActivity = {
+                BUS:"green",
+                WALKING:"purple",
+                IDLE_INDOOR:"blue",
+                IDLE_OUTDOOR: "red",
+                TRAIN: "black",
+                CAR: "yellow",
+                OTHER: "pink",
+            };
+            $.ajax({
+                type: "GET",
+                url: "GroundTruth.txt",
+                dataType: "text",
+                success: function (data) { processGroundTruth(data); }
+            });
+
+            $.ajax({
+                type: "GET",
+                url: "LinAccl.txt",
+                dataType: "text",
+                success: function (data) { processAcclData(data); }
+            });
+
+            $.ajax({
+                type: "GET",
+                url: "Mag.txt",
+                dataType: "text",
+                success: function (data) { processMagData(data); }
+            });
+
+            $.ajax({
+                type: "GET",
+                url: "Gravity.txt",
+                dataType: "text",
+                success: function (data) { processGravData(data); }
+            });
+
+            $.ajax({
+                type: "GET",
+                url: "Light.txt",
+                dataType: "text",
+                success: function (data) { processLightData(data); }
+            });
+            $.ajax({
+                type: "GET",
+                url: "Baro.txt",
+                dataType: "text",
+                success: function (data) { processBaroData(data); }
+            });
+
+            $.ajax({
+                type: "GET",
+                url: "Loc.txt",
+                dataType: "text",
+                success: function (data) { processLocData(data); }
+            });
+
+            $.ajax({
+                type: "GET",
+                url: "Gyro.txt",
+                dataType: "text",
+                success: function (data) { processGravData(data); }
+            });
+
+
+            function enQueue(queue, val, window){
+                if(queue.length < window){
+                    queue.push(val);
+                }else {
+                    queue.shift();
+                    queue.push(val);
+                }
+            }
+
+
+            function processGroundTruth(allText){
+                var allLinesArray = allText.split('\n');
+                if (allLinesArray.length > 0) {
+
+                    for (var i = 0; i <= allLinesArray.length - 1; i++) {
+                        var rowData = allLinesArray[i].split(',');
+                        if(rowData && rowData.length > 1){
+                            var endStrip = (i >= allLinesArray.length - 2 ? 1658618694906 : allLinesArray[i+1].split(',')[1]*1);
+                            striplines.push({startValue: new Date(rowData[1]*1), endValue: new Date(endStrip), color: hashActivity[rowData[4]], label: rowData[4], opacity: 0.4});
+                        }
+                    }
+                }
+            }
+            function processAcclData(allText) {
+                var allLinesArray = allText.split('\n');
+                var meanQueue = [], stdDevQueue = [], filteredData = [];
+                var prevMag = 0, currentState, lastState;
+                if (allLinesArray.length > 0) {
+                    var magnitudeDataPoints = [],meanDataPoints = [], stdDevDatapoints = [];
+                    for (var i = 0; i <= allLinesArray.length - 1; i++) {
+                        //console.log(i);
+                        var rowData = allLinesArray[i].split(',');
+                        if(rowData && rowData.length > 1){
+
+                            filteredData = highPass([parseFloat(rowData[2]), parseFloat(rowData[3]), parseFloat(rowData[4])], filteredData);
+
+                            //magnitude = Math.sqrt(Math.pow(rowData[2],2) +  Math.pow(rowData[3],2) +  Math.pow(rowData[4],2) );
+                            magnitude = Math.sqrt(Math.pow(filteredData[0],2) +  Math.pow(filteredData[1],2) +  Math.pow(filteredData[2],2) );
+                            magnitudeDataPoints.push({ x: new Date(rowData[1]*1), y: magnitude});
+                            enQueue(meanQueue, magnitude, 160);
+                            enQueue(stdDevQueue, magnitude  , 160);
+                            meanDataPoints.push({ x: new Date(rowData[1]*1), y: math.mean(meanQueue)});
+                            stdDevDatapoints.push({ x: new Date(rowData[1]*1), y: math.std(stdDevQueue)});
+                            currentState = lastState;
+                            if (prevMag < magnitude)
+                                currentState = 'below';
+                            else if (prevMag > magnitude)
+                                currentState = 'above';
+
+                            /*if (currentState !== lastState){
+                             enQueue(meanQueue, prevMag, 50);
+                             enQueue(stdDevQueue, prevMag  , 50);
+                             if(i>0){
+                             meanDataPoints.push({ x: new Date((allLinesArray[i-1].split(',')[1]*1 + rowData[1]*1)/2), y: math.mean(meanQueue)});
+                             stdDevDatapoints.push({ x: new Date((allLinesArray[i-1].split(',')[1]*1 + rowData[1]*1)/2), y: math.std(stdDevQueue)});
+                             }
+                             //console.log(magnitude);
+                             }*/
+                            lastState = currentState;
+                            // enQueue(meanQueue, magnitude,2);
+
+                            //enQueue(stdDevQueue, magnitude,10);
+                            //
+                            prevMag = magnitude;
+                        }
+                    }
+                    acclChart.options.data[0].dataPoints = magnitudeDataPoints;
+                    acclChart.options.data[1].dataPoints = meanDataPoints;
+                    acclChart.options.data[2].dataPoints = stdDevDatapoints;
+                    acclChart.options.axisX.stripLines = striplines;
+                    acclChart.render();
+
+                }
+            }
+            var ALPHA = 0.15;
+
+            function highPass(input, output) {
+                if ( output.length === 0 ) return input;
+                for ( i=0; i<input.length; i++ ) {
+                    output[i] = input[i] - (output[i] + ALPHA * (input[i] - output[i]));
+                }
+                return(output);
+            }
+            function lowPass(input, output){
+
+                if ( output.length === 0 ) { return input; }
+                for (i=0; i<input.length; i++ ) {
+                    output[i] = output[i] + ALPHA * (input[i] - output[i]);
+                }
+
+                return output;
+            }
+
+            function processMagData(allText) {
+                var allLinesArray = allText.split('\n');
+                var meanQueue = [], stdDevQueue = [], filteredData = [];
+
+                if (allLinesArray.length > 0) {
+                    var magnitudeDataPoints = [],meanDataPoints = [], stdDevDatapoints = [];
+                    for (var i = 0; i <= allLinesArray.length - 1; i++) {
+                        var rowData = allLinesArray[i].split(',');
+                        if(rowData && rowData.length > 1){
+                            filteredData = lowPass([parseFloat(rowData[2]), parseFloat(rowData[3]), parseFloat(rowData[4])], filteredData);
+                            magnitude = Math.sqrt(Math.pow(filteredData[0],2) +  Math.pow(filteredData[1],2) +  Math.pow(filteredData[2],2) );
+                            magnitudeDataPoints.push({ x: new Date(rowData[1]*1), y: magnitude});
+                            // magnitudeDataPoints.push({ x: new Date(rowData[1]*1), y:Math.sqrt(Math.pow(rowData[2],2) +  Math.pow(rowData[3],2) +  Math.pow(rowData[4],2) )});
+                        }
+                        enQueue(meanQueue, magnitude, 160);
+                        enQueue(stdDevQueue, magnitude  , 160);
+                        meanDataPoints.push({ x: new Date(rowData[1]*1), y: math.mean(meanQueue)});
+                        stdDevDatapoints.push({ x: new Date(rowData[1]*1), y: math.std(stdDevQueue)});
+                    }
+
+
+                    MagChart.options.data[0].dataPoints = magnitudeDataPoints;
+                    MagChart.options.data[1].dataPoints = meanDataPoints;
+                    MagChart.options.data[2].dataPoints = stdDevDatapoints;
+                    MagChart.options.axisX.stripLines = striplines;
+                    MagChart.render();
+
+                }
+            }
+
+            function processGravData(allText) {
+                var allLinesArray = allText.split('\n');
+                if (allLinesArray.length > 0) {
+                    var dataPoints = [];
+                    for (var i = 0; i <= allLinesArray.length - 1; i++) {
+                        var rowData = allLinesArray[i].split(',');
+                        if(rowData && rowData.length > 1)
+                            dataPoints.push({ x: new Date(rowData[1]*1), y:Math.sqrt(Math.pow(rowData[2],2) +  Math.pow(rowData[3],2) +  Math.pow(rowData[4],2) )});
+                    }
+                    GravChart.options.data[0].dataPoints = dataPoints;
+                    GravChart.options.axisX.stripLines = striplines;
+                    GravChart.render();
+
+                }
+            }
+
+            function processGravData(allText) {
+                var allLinesArray = allText.split('\n');
+                if (allLinesArray.length > 0) {
+                    var dataPoints = [];
+                    for (var i = 0; i <= allLinesArray.length - 1; i++) {
+                        var rowData = allLinesArray[i].split(',');
+                        if(rowData && rowData.length > 1)
+                            dataPoints.push({ x: new Date(rowData[1]*1), y:Math.sqrt(Math.pow(rowData[2],2) +  Math.pow(rowData[3],2) +  Math.pow(rowData[4],2) )});
+                    }
+                    GyroChart.options.data[0].dataPoints = dataPoints;
+                    GyroChart.options.axisX.stripLines = striplines;
+                    GyroChart.render();
+
+                }
+            }
+
+            function processLightData(allText) {
+                var allLinesArray = allText.split('\n');
+                if (allLinesArray.length > 0) {
+                    var dataPoints = [];
+                    for (var i = 0; i <= allLinesArray.length - 1; i++) {
+                        var rowData = allLinesArray[i].split(',');
+                        if(rowData && rowData.length > 1)
+                            dataPoints.push({ x: new Date(rowData[1]*1), y: rowData[2] * 1});
+                    }
+                    LightChart.options.data[0].dataPoints = dataPoints;
+                    LightChart.options.axisX.stripLines = striplines;
+                    LightChart.render();
+
+                }
+            }
+
+            function processBaroData(allText) {
+                var allLinesArray = allText.split('\n');
+                if (allLinesArray.length > 0) {
+                    var dataPoints = [], dataPoints2 = [];
+                    for (var i = 0; i <= allLinesArray.length - 1; i++) {
+                        var rowData = allLinesArray[i].split(',');
+                        if(rowData && rowData.length > 1)
+                            dataPoints.push({ x: new Date(rowData[1]*1), y: rowData[2]*1});
+                        dataPoints2.push({ x: new Date(rowData[1]*1), y: rowData[3]*1});
+                    }
+                    PressureChart.options.data[0].dataPoints = dataPoints;
+                    PressureChart.options.axisX.stripLines = striplines;
+                    PressureChart.render();
+                    AltitudeChart.options.data[0].dataPoints = dataPoints2;
+                    AltitudeChart.options.axisX.stripLines = striplines;
+                    AltitudeChart.render();
+                }
+            }
+
+            function processLocData(allText) {
+                var allLinesArray = allText.split('\n');
+                if (allLinesArray.length > 0) {
+                    var dataPoints = [];
+                    for (var i = 0; i <= allLinesArray.length - 1; i++) {
+                        var rowData = allLinesArray[i].split(',');
+                        if(rowData && rowData.length > 1)
+                            dataPoints.push({ x: new Date(rowData[1]*1), y: (rowData[4] === "network") ? 0 : 0.5});
+                    }
+                    LocationProviderChart.options.data[0].dataPoints = dataPoints;
+                    LocationProviderChart.options.axisX.stripLines = striplines;
+                    LocationProviderChart.render();
+
+                }
+            }
+
+
+            var acclChart = new CanvasJS.Chart("AcclChart", {
+                // animationEnabled: true,
+                zoomEnabled: true,
+                theme: "theme2",
+                title: {
+                    text: "LinAccl graph"
+                },
+                legend: {
+                    horizontalAlign: "left", // "center" , "right"
+                    verticalAlign: "top",  // "top" , "bottom"
+                },
+                axisX:{
+                    stripLines:[]
+                },
+                axisY:{
+                    title: "Magnitude",
+                    maximum: 15
+                },
+                data: [
+                    {
+                        legendText: "Magnitude",
+                        type: "spline",
+                        dataPoints: []
+                    },
+                    {
+                        showInLegend: true,
+                        legendText: "Mean",
+                        type: "spline",
+                        dataPoints: []
+                    },
+                    {
+                        showInLegend: true,
+                        legendText: "Std Dev",
+                        type: "spline",
+                        dataPoints: []
+                    }
+                ]
+            });
+
+            var MagChart = new CanvasJS.Chart("MagChart", {
+                // animationEnabled: true,
+                zoomEnabled: true,
+                theme: "theme2",
+                title: {
+                    text: "Mag graph"
+                },
+                legend: {
+                    horizontalAlign: "left", // "center" , "right"
+                    verticalAlign: "top",  // "top" , "bottom"
+                },
+                axisX:{
+                    stripLines:[]
+                },
+                axisY:{
+                    title: "Magnitude"
+                },
+                data: [
+                    {
+                        type: "spline",
+                        dataPoints: []
+                    },
+                    {
+                        showInLegend: true,
+                        legendText: "Mean",
+                        type: "spline",
+                        dataPoints: []
+                    },
+                    {
+                        showInLegend: true,
+                        legendText: "Std Dev",
+                        type: "spline",
+                        dataPoints: []
+                    }
+                ]
+            });
+
+            var GyroChart = new CanvasJS.Chart("GyroChart", {
+                // animationEnabled: true,
+                zoomEnabled: true,
+                theme: "theme2",
+                title: {
+                    text: "Gyro graph"
+                },
+                axisX:{
+                    stripLines:[]
+                },
+                data: [
+                    {
+                        type: "spline",
+                        dataPoints: []
+                    }
+                ]
+            });
+
+            var GravChart = new CanvasJS.Chart("GravChart", {
+                // animationEnabled: true,
+                zoomEnabled: true,
+                theme: "theme2",
+                title: {
+                    text: "Gravity graph"
+                },
+                axisX:{
+                    stripLines:[]
+                },
+                axisY:{
+                    viewportMinimum: 9.8057,
+                    viewportMaximum: 9.8077
+                },
+                data: [
+                    {
+                        type: "spline",
+                        dataPoints: []
+                    }
+                ]
+            });
+
+            var LightChart = new CanvasJS.Chart("LightChart", {
+                // animationEnabled: true,
+                zoomEnabled: true,
+                theme: "theme2",
+                title: {
+                    text: "Lux graph"
+                },
+                axisX:{
+                    stripLines:[]
+                },
+                axisY:{
+                    title: "Lux"
+                },
+                data: [
+                    {
+                        type: "spline",
+                        dataPoints: []
+                    }
+                ]
+            });
+            var PressureChart = new CanvasJS.Chart("PressureChart", {
+                // animationEnabled: true,
+                zoomEnabled: true,
+                theme: "theme2",
+                title: {
+                    text: "Pressure graph"
+                },
+                axisX:{
+                    stripLines:[]
+                },
+                axisY:{
+                    title: "Bar"
+                },
+                data: [
+                    {
+                        type: "spline",
+                        dataPoints: []
+                    }
+                ]
+            });
+            var AltitudeChart = new CanvasJS.Chart("AltitudeChart", {
+                // animationEnabled: true,
+                zoomEnabled: true,
+                theme: "theme2",
+                title: {
+                    text: "Altitude graph"
+                },
+                axisX:{
+                    stripLines:[]
+                },
+                axisY:{
+                    title: "Height(m)"
+                },
+                data: [
+                    {
+                        type: "spline",
+                        dataPoints: []
+                    }
+                ]
+            });
+
+            var LocationProviderChart = new CanvasJS.Chart("LocationProviderChart", {
+                // animationEnabled: true,
+                zoomEnabled: true,
+                theme: "theme2",
+                title: {
+                    text: "LocationProvider graph, (High = GPS, Low = Network)"
+                },
+                axisX:{
+                    stripLines:[]
+                },
+                axisY:{
+                    title: "Provider"
+                },
+                data: [
+                    {
+                        type: "area",
+                        dataPoints: []
+                    }
+                ]
+            });
+        });
+    </script>
+    <script type="text/javascript" src="http://canvasjs.com/assets/script/canvasjs.min.js"></script>
+</head>
+<body>
+<div id="AcclChart" style="height: 300px; width: 100%;"></div>
+<div id="MagChart" style="height: 300px; width: 100%;"></div>
+<div id="GravChart" style="height: 300px; width: 100%;"></div>
+
+<div id="GyroChart" style="height: 300px; width: 100%;"></div>
+<div id="LightChart" style="height: 300px; width: 100%;"></div>
+<div id="PressureChart" style="height: 300px; width: 100%;"></div>
+<div id="AltitudeChart" style="height: 300px; width: 100%;"></div>
+<div id="LocationProviderChart" style="height: 300px; width: 100%;"></div>
+
+</body>
+
+</html>
