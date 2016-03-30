@@ -223,7 +223,7 @@ public class ActivityDetection {
 
         double value = lightWindow.pushValue(light).getMean();
 
-        if (value < 1000) {
+        if (value < 1000.0) {
             ioOracle.setLightActivity(Sensor.TYPE_LIGHT, IdleActivityOracle.LIGHTSENSOR_ACTIVITY_LOW);
         } else {
             ioOracle.setLightActivity(Sensor.TYPE_LIGHT, IdleActivityOracle.LIGHTSENSOR_ACTIVITY_HIGH);
@@ -277,7 +277,7 @@ public class ActivityDetection {
             mean = locWindow.pushValue(0).getMean();
         }
 
-        double speedInKmh = (float) getSpeedInKmh(mean);
+        double speedInKmh = getSpeedInKmh(mean);
 
         if (speedInKmh <= 1.08) {
             ioOracle.setLightActivity(LocationSensor.TYPE_LOCATION, LocationSensor.GPS_SPEED_LOW);
