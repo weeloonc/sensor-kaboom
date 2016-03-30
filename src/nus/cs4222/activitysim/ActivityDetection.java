@@ -295,7 +295,7 @@ public class ActivityDetection {
 			mean = sWindow.pushValue(0).getMean();
 		}
 		float speedInKMHr = (float) mean * 18 / 5;
-		if (speedInKMHr <= 1.05) {
+		if (speedInKMHr <= 1.08) {
 			ioDetector.setLightActivity(TYPE_LOCATION, GPS_SPEED_LOW);
 			oracle.setSensorActivity(TYPE_LOCATION, ActivityOracle.SENSOR_ACTIVITY_LOW);
 		} else if (speedInKMHr <= 1.5) {
@@ -338,7 +338,7 @@ public class ActivityDetection {
 		sEventWindows = new HashMap<Integer, EventWindow>();
 		sEventWindows.put(Sensor.TYPE_LINEAR_ACCELERATION, new EventWindow(60));
 		sEventWindows.put(Sensor.TYPE_MAGNETIC_FIELD, new EventWindow(EventWindow.WINDOW_SIZE_SMALL));
-		sEventWindows.put(TYPE_LOCATION, new EventWindow(EventWindow.WINDOW_SIZE_SMALL));
+		sEventWindows.put(TYPE_LOCATION, new EventWindow(3));
 
 		xlEventWindows = new HashMap<Integer, EventWindow>();
 		xlEventWindows.put(Sensor.TYPE_LINEAR_ACCELERATION, new EventWindow(88));
