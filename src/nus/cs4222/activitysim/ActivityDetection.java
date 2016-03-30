@@ -305,13 +305,13 @@ public class ActivityDetection {
 			mean = sWindow.pushValue(0).getMean();
 		}
 		float speedInKMHr = (float) mean * 18 / 5;
-		if (speedInKMHr <= 0.5) {
+		if (speedInKMHr <= 0.8) {
 			ioDetector.setLightActivity(TYPE_LOCATION, GPS_SPEED_LOW);
 			oracle.setSensorActivity(TYPE_LOCATION, ActivityOracle.SENSOR_ACTIVITY_LOW);
-		} else if (speedInKMHr <= 0.8) {
+		} else if (speedInKMHr <= 1.5) {
 			ioDetector.setLightActivity(TYPE_LOCATION, GPS_SPEED_MEDIUM);
 			oracle.setSensorActivity(TYPE_LOCATION, ActivityOracle.SENSOR_ACTIVITY_MID);
-		} else if (speedInKMHr > 0.8) {
+		} else if (speedInKMHr > 1.5) {
 			ioDetector.setLightActivity(TYPE_LOCATION, GPS_SPEED_HIGH);
 			oracle.setSensorActivity(TYPE_LOCATION, ActivityOracle.SENSOR_ACTIVITY_HIGH);
 		}
@@ -474,7 +474,7 @@ public class ActivityDetection {
 
 			boolean isIdle = sensorActivities.get(Sensor.TYPE_LINEAR_ACCELERATION) <= SENSOR_ACTIVITY_MID
 					&& sensorActivities.get(Sensor.TYPE_MAGNETIC_FIELD) == SENSOR_ACTIVITY_LOW
-					/*&& (isGPS ? sensorActivities.get(TYPE_LOCATION) == SENSOR_ACTIVITY_LOW : true)*/; //remove this to make it 89.96 and 70.41
+					&& (isGPS ? sensorActivities.get(TYPE_LOCATION) == SENSOR_ACTIVITY_LOW : true); //remove this to make it 89.96 and 70.41
 						//adding in will make it 90.76 and 63.34
 
 			boolean isWalking = sensorActivities.get(Sensor.TYPE_LINEAR_ACCELERATION) == SENSOR_ACTIVITY_HIGH;
