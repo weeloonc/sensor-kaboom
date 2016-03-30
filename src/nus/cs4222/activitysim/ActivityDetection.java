@@ -259,16 +259,6 @@ public class ActivityDetection {
 	public void onProximitySensorChanged( long timestamp , 
 			float proximity , 
 			int accuracy ) {
-
-		boolean isPhoneFaceUp = false;
-		if(proximity != 0){
-			//phone is faced up
-			isPhoneFaceUp = true;
-			ioDetector.setLightActivity(Sensor.TYPE_PROXIMITY, IODetector.PROXIMITY_HIGH );
-		} else{
-			ioDetector.setLightActivity(Sensor.TYPE_PROXIMITY, IODetector.PROXIMITY_LOW );
-		}
-
 	}
 
 	/** 
@@ -305,7 +295,7 @@ public class ActivityDetection {
 			mean = sWindow.pushValue(0).getMean();
 		}
 		float speedInKMHr = (float) mean * 18 / 5;
-		if (speedInKMHr <= 0.75) {
+		if (speedInKMHr <= 0.85) {
 			ioDetector.setLightActivity(TYPE_LOCATION, GPS_SPEED_LOW);
 			oracle.setSensorActivity(TYPE_LOCATION, ActivityOracle.SENSOR_ACTIVITY_LOW);
 		} else if (speedInKMHr <= 1.6) {
@@ -340,9 +330,9 @@ public class ActivityDetection {
 	public static final int GPS_SPEED_HIGH = 2; //Above 60 - car
 
 	public ActivityDetection() {
-		ioDetector = new IODetector(770);
+		ioDetector = new IODetector(735);
 		locationManager = new LocationManager();
-		oracle = new ActivityOracle(1200); // stores past 30 sec activity for eval
+		oracle = new ActivityOracle(1195); // stores past 30 sec activity for eval
 		oracle.setIODetector(ioDetector);
 
 		sEventWindows = new HashMap<Integer, EventWindow>();
