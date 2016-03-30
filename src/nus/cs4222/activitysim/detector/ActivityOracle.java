@@ -54,14 +54,15 @@ public class ActivityOracle {
     public UserActivities evaluateUserActivity() {
 
         boolean isIdle = sensorActivities.get(Sensor.TYPE_LINEAR_ACCELERATION) <= SENSOR_ACTIVITY_MID
-                && sensorActivities.get(Sensor.TYPE_MAGNETIC_FIELD) == SENSOR_ACTIVITY_LOW && (usingGpsProvider
-                        ? sensorActivities.get(LocationSensor.TYPE_LOCATION) == SENSOR_ACTIVITY_LOW : true);
+                && sensorActivities.get(Sensor.TYPE_MAGNETIC_FIELD) == SENSOR_ACTIVITY_LOW
+                && (usingGpsProvider ? sensorActivities.get(LocationSensor.TYPE_LOCATION) == SENSOR_ACTIVITY_LOW : true);
 
         boolean isWalking = sensorActivities.get(Sensor.TYPE_LINEAR_ACCELERATION) == SENSOR_ACTIVITY_HIGH;
 
         boolean isVehicle = sensorActivities.get(Sensor.TYPE_LINEAR_ACCELERATION) <= SENSOR_ACTIVITY_MID
-                && sensorActivities.get(Sensor.TYPE_MAGNETIC_FIELD) >= SENSOR_ACTIVITY_MID && (usingGpsProvider
-                        ? sensorActivities.get(LocationSensor.TYPE_LOCATION) == SENSOR_ACTIVITY_HIGH : true);
+                && sensorActivities.get(Sensor.TYPE_MAGNETIC_FIELD) >= SENSOR_ACTIVITY_MID
+                && (usingGpsProvider ? sensorActivities.get(LocationSensor.TYPE_LOCATION) == SENSOR_ACTIVITY_HIGH : true)
+                || (usingGpsProvider && sensorActivities.get(LocationSensor.TYPE_LOCATION) == SENSOR_ACTIVITY_HIGH);
 
         if (isIdle) {
             return UserActivities.IDLE_INDOOR;
