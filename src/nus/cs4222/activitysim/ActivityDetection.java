@@ -629,7 +629,7 @@ public class ActivityDetection {
 			lightActivity.put(Sensor.TYPE_PROXIMITY, 0);
 			lightActivity.put(TYPE_LOCATION,0);
 			window = new UserActivities[windowSize];
-			confidenceThreshold = (int) (0.75 * windowSize);
+			confidenceThreshold = (int) (0.677 * windowSize);
 		}
 		public void setLightActivity(int sensorType, int value){
 			lightActivity.put(sensorType, value);
