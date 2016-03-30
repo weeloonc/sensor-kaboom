@@ -7,6 +7,7 @@ import java.text.*;
 import android.hardware.*;
 import android.location.LocationManager;
 import android.util.*;
+//import com.sun.deploy.security.ValidationState;
 
 /**
    Class containing the activity detection algorithm.
@@ -282,15 +283,7 @@ public class ActivityDetection {
        @param   bearing      Bearing (deg) (may be -1 if unavailable)
        @param   speed        Speed (m/sec) (may be -1 if unavailable)
 	 */
-	private boolean isGPS = false;
-	private LocationManager locationManager;
-
-	public static final int GPS_SPEED_LOW = 0; //below 10 - walking
-	public static final int GPS_SPEED_MEDIUM = 1; //below 60 - train
-	public static final int GPS_SPEED_HIGH = 2; //Above 60 - car
-
-
-	public void onLocationSensorChanged( long timestamp , 
+	public void onLocationSensorChanged( long timestamp ,
 			String provider , 
 			double latitude , 
 			double longitude , 
@@ -298,19 +291,29 @@ public class ActivityDetection {
 			double altitude , 
 			float bearing , 
 			float speed ) {
-		locationManager = new LocationManager();
-
-		if(provider.equals(locationManager.GPS_PROVIDER)){
+		/*if(provider.equals(locationManager.GPS_PROVIDER)){
 			isGPS = true;
-		}else isGPS = false;
-
-		float speedKM = speed * 18 / 5;
-		if(speedKM <= 10){
-			ioDetector.setLightActivity(IODetector.LocationSensor, GPS_SPEED_LOW );
-		}else if (speedKM <= 60){
-			ioDetector.setLightActivity(IODetector.LocationSensor, GPS_SPEED_MEDIUM );
-		}else if (speedKM > 60 ){
-			ioDetector.setLightActivity(IODetector.LocationSensor, GPS_SPEED_HIGH);
+		}else
+			isGPS = false;*/
+		EventWindow sWindow = sEventWindows.get(TYPE_LOCATION);
+		double mean;
+		if(provider.equals(locationManager.GPS_PROVIDER)) {
+			isGPS=true;
+			mean = sWindow.pushValue(speed).getMean();
+		}else{
+			isGPS=false;
+			mean = sWindow.pushValue(0).getMean();
+		}
+		float speedInKMHr = (float) mean * 18 / 5;
+		if (speedInKMHr <= 0.5) {
+			ioDetector.setLightActivity(TYPE_LOCATION, GPS_SPEED_LOW);
+			oracle.setSensorActivity(TYPE_LOCATION, ActivityOracle.SENSOR_ACTIVITY_LOW);
+		} else if (speedInKMHr <= 1) {
+			ioDetector.setLightActivity(TYPE_LOCATION, GPS_SPEED_MEDIUM);
+			oracle.setSensorActivity(TYPE_LOCATION, ActivityOracle.SENSOR_ACTIVITY_MID);
+		} else if (speedInKMHr > 1) {
+			ioDetector.setLightActivity(TYPE_LOCATION, GPS_SPEED_HIGH);
+			oracle.setSensorActivity(TYPE_LOCATION, ActivityOracle.SENSOR_ACTIVITY_HIGH);
 		}
 
 	}
@@ -319,7 +322,7 @@ public class ActivityDetection {
 	private static String convertUnixTimeToReadableString( long millisec ) {
 		return sdf.format( new Date( millisec ) );
 	}
-
+	public static final int TYPE_LOCATION = 99;
 	/** To format the UNIX millis time as a human-readable string. */
 	private static final SimpleDateFormat sdf = new SimpleDateFormat( "yyyy-MM-dd-h-mm-ssa" );
 
@@ -330,20 +333,28 @@ public class ActivityDetection {
 	private EventWindow xxlMagEventWindow;
 	private IODetector ioDetector;
 
+	private boolean isGPS = false;
+	private LocationManager locationManager;
+	public static final int GPS_SPEED_LOW = 0; //below 10 - walking
+	public static final int GPS_SPEED_MEDIUM = 1; //below 60 - train
+	public static final int GPS_SPEED_HIGH = 2; //Above 60 - car
+
 	public ActivityDetection() {
-		ioDetector = new IODetector();
+		ioDetector = new IODetector(770);
+		locationManager = new LocationManager();
 		oracle = new ActivityOracle(1200); // stores past 30 sec activity for eval
 		oracle.setIODetector(ioDetector);
 
 		sEventWindows = new HashMap<Integer, EventWindow>();
 		sEventWindows.put(Sensor.TYPE_LINEAR_ACCELERATION, new EventWindow(EventWindow.WINDOW_SIZE_SMALL));
 		sEventWindows.put(Sensor.TYPE_MAGNETIC_FIELD, new EventWindow(EventWindow.WINDOW_SIZE_SMALL));
-
+		sEventWindows.put(TYPE_LOCATION, new EventWindow(EventWindow.WINDOW_SIZE_SMALL));
 
 		xlEventWindows = new HashMap<Integer, EventWindow>();
 		xlEventWindows.put(Sensor.TYPE_LINEAR_ACCELERATION, new EventWindow(EventWindow.WINDOW_SIZE_XLARGE));
 		xlEventWindows.put(Sensor.TYPE_MAGNETIC_FIELD, new EventWindow(EventWindow.WINDOW_SIZE_XLARGE));
 		xlEventWindows.put(Sensor.TYPE_LIGHT, new EventWindow(1000));
+
 
 		xxlMagEventWindow = new EventWindow(80);
 	}
@@ -438,11 +449,13 @@ public class ActivityDetection {
 			sensorActivities = new HashMap<Integer, Integer>();
 			sensorActivities.put(Sensor.TYPE_LINEAR_ACCELERATION, 0);
 			sensorActivities.put(Sensor.TYPE_MAGNETIC_FIELD, 0);
+			sensorActivities.put(TYPE_LOCATION, 0);
+
 			window = new UserActivities[windowSize];
-			confidenceThreshold = (int) (0.85 * windowSize);
+			confidenceThreshold = (int) (0.86 * windowSize);
 			log = new FileLogger();
 			try {
-				log.openLogFile(new File("sensor-logs/"), new Date().getTime() + "_oracle.csv");
+				//log.openLogFile(new File("sensor-logs/"), new Date().getTime() + "_oracle.csv");
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -460,12 +473,16 @@ public class ActivityDetection {
 		public UserActivities evaluateUserActivity() {
 
 			boolean isIdle = sensorActivities.get(Sensor.TYPE_LINEAR_ACCELERATION) <= SENSOR_ACTIVITY_MID
-					&& sensorActivities.get(Sensor.TYPE_MAGNETIC_FIELD) == SENSOR_ACTIVITY_LOW;
+					&& sensorActivities.get(Sensor.TYPE_MAGNETIC_FIELD) == SENSOR_ACTIVITY_LOW
+					&& (isGPS ? sensorActivities.get(TYPE_LOCATION) == SENSOR_ACTIVITY_LOW : true); //remove this to make it 89.96 and 70.41
+						//adding in will make it 90.76 and 63.34
 
 			boolean isWalking = sensorActivities.get(Sensor.TYPE_LINEAR_ACCELERATION) == SENSOR_ACTIVITY_HIGH;
 
 			boolean isVehicle = sensorActivities.get(Sensor.TYPE_LINEAR_ACCELERATION) <= SENSOR_ACTIVITY_MID
-					&& sensorActivities.get(Sensor.TYPE_MAGNETIC_FIELD) >= SENSOR_ACTIVITY_MID;
+					&& sensorActivities.get(Sensor.TYPE_MAGNETIC_FIELD) >= SENSOR_ACTIVITY_MID
+					&& (isGPS ? sensorActivities.get(TYPE_LOCATION) == SENSOR_ACTIVITY_HIGH : true) ||
+					(isGPS && sensorActivities.get(TYPE_LOCATION) == SENSOR_ACTIVITY_HIGH);
 
 					if (isIdle) {
 						return UserActivities.IDLE_INDOOR;
@@ -537,13 +554,14 @@ public class ActivityDetection {
 				throw new AssertionError("Should not happen");
 			}
 
-			log.logEvent(idleCount + "," + walkingCount + "," + vehicleCount);
+			//log.logEvent(idleCount + "," + walkingCount + "," + vehicleCount);
 		}
 
 		public UserActivities predictActivityState() {
 
 			if (idleCount > confidenceThreshold) {
-				return ioDetector.ioEvaluator(); //Determine if user is outdoor or indoor
+				ioDetector.pushActivityState(ioDetector.ioEvaluator());
+				return ioDetector.predictActivityState(); //Determine if user is outdoor or indoor
 			}
 			else if (walkingCount > confidenceThreshold) {
 				return UserActivities.WALKING;
@@ -558,7 +576,6 @@ public class ActivityDetection {
 				return UserActivities.INCORRECT;
 			}
 		}
-
 	}
 
 	public class HighPass {
@@ -582,7 +599,6 @@ public class ActivityDetection {
 		public double getValue() {
 			return filteredValue;
 		}
-
 	}
 
 	public class IODetector{
@@ -596,16 +612,24 @@ public class ActivityDetection {
 		public static final int GPS_SIGNAL_HIGH = 1;
 		public static final int GPS_SIGNAL_LOW = 0;
 
-		public static final int LocationSensor = 99;
+		private UserActivities[] window;
+		private int confidenceThreshold;
+		private int index;
+		private int indoorCount;
+		private int outdoorCount;
+		private int otherCount;
+		private int stateCount;
 
 		private Map<Integer, Integer> lightActivity;
 
-		public IODetector(){
+		public IODetector(int windowSize){
 			lightActivity = new HashMap<Integer, Integer>();
 			lightActivity.put(Sensor.TYPE_LIGHT, 0);
 			lightActivity.put(Sensor.TYPE_MAGNETIC_FIELD, 0);
 			lightActivity.put(Sensor.TYPE_PROXIMITY, 0);
-			lightActivity.put(LocationSensor,0);
+			lightActivity.put(TYPE_LOCATION,0);
+			window = new UserActivities[windowSize];
+			confidenceThreshold = (int) (0.75 * windowSize);
 		}
 		public void setLightActivity(int sensorType, int value){
 			lightActivity.put(sensorType, value);
@@ -613,17 +637,74 @@ public class ActivityDetection {
 
 		public UserActivities ioEvaluator(){
 			boolean isIndoor, isOutdoor;
-			if(lightActivity.get(Sensor.TYPE_PROXIMITY) == PROXIMITY_HIGH){
-				isOutdoor = lightActivity.get(Sensor.TYPE_LIGHT) == LIGHTSENSOR_ACTIVITY_HIGH;
-				if(isOutdoor && isGPS)return UserActivities.IDLE_OUTDOOR;
-			}
-			if((lightActivity.get(Sensor.TYPE_MAGNETIC_FIELD) == LIGHTSENSOR_ACTIVITY_LOW)&& isGPS
-					&& lightActivity.get(LocationSensor) == GPS_SPEED_LOW ){
+			//if(lightActivity.get(Sensor.TYPE_PROXIMITY) == PROXIMITY_HIGH){
+			isOutdoor = lightActivity.get(Sensor.TYPE_LIGHT) == LIGHTSENSOR_ACTIVITY_HIGH;
+			if(isOutdoor && isGPS)return UserActivities.IDLE_OUTDOOR;
+			//}
+			//System.out.println(lightActivity.get(Sensor.TYPE_MAGNETIC_FIELD) + " " + isGPS + " " + lightActivity.get(TYPE_LOCATION));
+			if((lightActivity.get(Sensor.TYPE_MAGNETIC_FIELD) == LIGHTSENSOR_ACTIVITY_HIGH)&& isGPS
+					&& lightActivity.get(TYPE_LOCATION) == GPS_SPEED_LOW ){
 				return UserActivities.IDLE_OUTDOOR;
-			}else if((lightActivity.get(Sensor.TYPE_MAGNETIC_FIELD) == LIGHTSENSOR_ACTIVITY_HIGH)&& !isGPS
-					&& lightActivity.get(LocationSensor) == GPS_SPEED_LOW)
+			}else if((lightActivity.get(Sensor.TYPE_MAGNETIC_FIELD) == LIGHTSENSOR_ACTIVITY_LOW)&& !isGPS
+					&& lightActivity.get(TYPE_LOCATION) == GPS_SPEED_LOW)
 				return UserActivities.IDLE_INDOOR;
-			else return UserActivities.INCORRECT;
+			else return UserActivities.OTHER;
+		}
+
+		public void pushActivityState(UserActivities state) {
+			UserActivities purgedState = null;
+			if (stateCount < window.length) {
+				stateCount++;
+			}
+			else {
+				purgedState = window[index];
+			}
+
+			window[index] = state;
+			index = ++index % window.length;
+
+			if (purgedState != null) {
+				switch (purgedState) {
+					case IDLE_INDOOR:
+						indoorCount--;
+						break;
+					case IDLE_OUTDOOR:
+						outdoorCount--;
+						break;
+					case OTHER:
+						otherCount--;
+						break;
+					default:
+						throw new AssertionError("Should not happen");
+				}
+			}
+
+			switch (state) {
+				case IDLE_INDOOR:
+					indoorCount++;
+				case IDLE_OUTDOOR:
+					outdoorCount++;
+				case OTHER:
+					otherCount++;
+					break;
+				default:
+					throw new AssertionError("Should not happen");
+			}
+
+			//log.logEvent(idleCount + "," + walkingCount + "," + vehicleCount);
+		}
+
+		public UserActivities predictActivityState() {
+
+			if (indoorCount > confidenceThreshold) {
+				return UserActivities.IDLE_INDOOR; //Determine if user is outdoor or indoor
+			}
+			else if (outdoorCount > confidenceThreshold) {
+				return UserActivities.IDLE_OUTDOOR;
+			}
+			else { // no confidence to predict
+				return UserActivities.INCORRECT;
+			}
 		}
 
 		//on Proximity change, tells IODetector to read from LightSensor
@@ -631,5 +712,4 @@ public class ActivityDetection {
 		//if lightsensor < 1000, mag std dev > 1, output IDLE_Indoor
 
 	}
-
 }
