@@ -295,13 +295,13 @@ public class ActivityDetection {
 			mean = sWindow.pushValue(0).getMean();
 		}
 		float speedInKMHr = (float) mean * 18 / 5;
-		if (speedInKMHr <= 0.85) {
+		if (speedInKMHr <= 1.05) {
 			ioDetector.setLightActivity(TYPE_LOCATION, GPS_SPEED_LOW);
 			oracle.setSensorActivity(TYPE_LOCATION, ActivityOracle.SENSOR_ACTIVITY_LOW);
-		} else if (speedInKMHr <= 1.6) {
+		} else if (speedInKMHr <= 1.5) {
 			ioDetector.setLightActivity(TYPE_LOCATION, GPS_SPEED_MEDIUM);
 			oracle.setSensorActivity(TYPE_LOCATION, ActivityOracle.SENSOR_ACTIVITY_MID);
-		} else if (speedInKMHr > 1.6) {
+		} else if (speedInKMHr > 1.5) {
 			ioDetector.setLightActivity(TYPE_LOCATION, GPS_SPEED_HIGH);
 			oracle.setSensorActivity(TYPE_LOCATION, ActivityOracle.SENSOR_ACTIVITY_HIGH);
 		}
@@ -336,14 +336,14 @@ public class ActivityDetection {
 		oracle.setIODetector(ioDetector);
 
 		sEventWindows = new HashMap<Integer, EventWindow>();
-		sEventWindows.put(Sensor.TYPE_LINEAR_ACCELERATION, new EventWindow(EventWindow.WINDOW_SIZE_SMALL));
+		sEventWindows.put(Sensor.TYPE_LINEAR_ACCELERATION, new EventWindow(60));
 		sEventWindows.put(Sensor.TYPE_MAGNETIC_FIELD, new EventWindow(EventWindow.WINDOW_SIZE_SMALL));
 		sEventWindows.put(TYPE_LOCATION, new EventWindow(EventWindow.WINDOW_SIZE_SMALL));
 
 		xlEventWindows = new HashMap<Integer, EventWindow>();
-		xlEventWindows.put(Sensor.TYPE_LINEAR_ACCELERATION, new EventWindow(EventWindow.WINDOW_SIZE_XLARGE));
-		xlEventWindows.put(Sensor.TYPE_MAGNETIC_FIELD, new EventWindow(EventWindow.WINDOW_SIZE_XLARGE));
-		xlEventWindows.put(Sensor.TYPE_LIGHT, new EventWindow(1000));
+		xlEventWindows.put(Sensor.TYPE_LINEAR_ACCELERATION, new EventWindow(88));
+		xlEventWindows.put(Sensor.TYPE_MAGNETIC_FIELD, new EventWindow(EventWindow.WINDOW_SIZE_SMALL));
+		xlEventWindows.put(Sensor.TYPE_LIGHT, new EventWindow(EventWindow.WINDOW_SIZE_SMALL));
 
 
 		xxlMagEventWindow = new EventWindow(70);
@@ -442,7 +442,7 @@ public class ActivityDetection {
 			sensorActivities.put(TYPE_LOCATION, 0);
 
 			window = new UserActivities[windowSize];
-			confidenceThreshold = (int) (0.86 * windowSize);
+			confidenceThreshold = (int) (0.861 * windowSize);
 			log = new FileLogger();
 			try {
 				//log.openLogFile(new File("sensor-logs/"), new Date().getTime() + "_oracle.csv");
