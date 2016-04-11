@@ -122,9 +122,19 @@ public class ActivityDetection {
         double value = linAcclWindowMean.pushValue(valueRaw).getMean();
         double stdDev = linAcclWindowStdDev.pushValue(valueRaw).getStdDevP();
 
-        if (value < 1.2) {
+       /* if (value < 1.2) {
             oracle.setSensorActivity(Sensor.TYPE_LINEAR_ACCELERATION, ActivityOracle.SENSOR_ACTIVITY_LOW);
         } else if (stdDev < 0.9) {
+            oracle.setSensorActivity(Sensor.TYPE_LINEAR_ACCELERATION, ActivityOracle.SENSOR_ACTIVITY_MID);
+        } else {
+            oracle.setSensorActivity(Sensor.TYPE_LINEAR_ACCELERATION, ActivityOracle.SENSOR_ACTIVITY_HIGH);
+        }*/
+        if (value < 1.1) {
+            if(stdDev > 0.4)
+                oracle.setSensorActivity(Sensor.TYPE_LINEAR_ACCELERATION, ActivityOracle.SENSOR_ACTIVITY_MID);
+            else
+                oracle.setSensorActivity(Sensor.TYPE_LINEAR_ACCELERATION, ActivityOracle.SENSOR_ACTIVITY_LOW);
+        }else if ( stdDev < 0.8) {
             oracle.setSensorActivity(Sensor.TYPE_LINEAR_ACCELERATION, ActivityOracle.SENSOR_ACTIVITY_MID);
         } else {
             oracle.setSensorActivity(Sensor.TYPE_LINEAR_ACCELERATION, ActivityOracle.SENSOR_ACTIVITY_HIGH);
@@ -172,16 +182,16 @@ public class ActivityDetection {
         double valueRaw = getMagnitude(x, y, z);
         double stdDev = magWindow.pushValue(valueRaw).getStdDevP();
 
-        if (stdDev < 0.86) {
+        if (stdDev < 0.8) {
             oracle.setSensorActivity(Sensor.TYPE_MAGNETIC_FIELD, ActivityOracle.SENSOR_ACTIVITY_LOW);
-        } else if (stdDev < 1.7) {
+        } else if (stdDev < 1.9) {
             oracle.setSensorActivity(Sensor.TYPE_MAGNETIC_FIELD, ActivityOracle.SENSOR_ACTIVITY_MID);
         } else {
             oracle.setSensorActivity(Sensor.TYPE_MAGNETIC_FIELD, ActivityOracle.SENSOR_ACTIVITY_HIGH);
         }
 
         // Light detector
-        if (stdDev <= 0.9) {
+        if (stdDev <= 0.7) {
             ioOracle.setLightActivity(Sensor.TYPE_MAGNETIC_FIELD, IdleActivityOracle.LIGHTSENSOR_ACTIVITY_LOW);
         } else {
             ioOracle.setLightActivity(Sensor.TYPE_MAGNETIC_FIELD, IdleActivityOracle.LIGHTSENSOR_ACTIVITY_HIGH);
@@ -313,10 +323,11 @@ public class ActivityDetection {
 
         double speedInKmh = getSpeedInKmh(mean);
 
-        if (speedInKmh <= 1.08) {
+       // if (speedInKmh <= 1.08) {
+        if (speedInKmh <= 0.7) {
             ioOracle.setLightActivity(LocationSensor.TYPE_LOCATION, LocationSensor.GPS_SPEED_LOW);
             oracle.setSensorActivity(LocationSensor.TYPE_LOCATION, ActivityOracle.SENSOR_ACTIVITY_LOW);
-        } else if (speedInKmh <= 1.5) {
+        } else if (speedInKmh <= 1.1) {
             ioOracle.setLightActivity(LocationSensor.TYPE_LOCATION, LocationSensor.GPS_SPEED_MID);
             oracle.setSensorActivity(LocationSensor.TYPE_LOCATION, ActivityOracle.SENSOR_ACTIVITY_MID);
         } else {
@@ -346,10 +357,11 @@ public class ActivityDetection {
         oracle.setIdleActivityOracle(ioOracle);
 
         linAcclWindowMean = new EventWindow(60);
-        linAcclWindowStdDev = new EventWindow(88);
+        linAcclWindowStdDev = new EventWindow(120);
+        //magWindow = new EventWindow(70);
         magWindow = new EventWindow(70);
         lightWindow = new EventWindow(5);
-        locWindow = new EventWindow(3);
+        locWindow = new EventWindow(7);
     }
 
     private double getMagnitude(double... tuple) {
