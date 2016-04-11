@@ -139,13 +139,17 @@ public class ActivityDetection {
             oracle.setSensorActivity(Sensor.TYPE_LINEAR_ACCELERATION, ActivityOracle.SENSOR_ACTIVITY_HIGH);
         }*/
 
-        UserActivities currentState = oracle.evaluateUserActivity();
-        oracle.pushActivityState(currentState);
+        if (outputCoordinator++ == 0) {
+            UserActivities currentState = oracle.evaluateUserActivity();
+            oracle.pushActivityState(currentState);
+            ioOracle.pushActivityState(ioOracle.ioEvaluator());
 
-        UserActivities predictedState = oracle.predictActivityState();
+            UserActivities predictedState = oracle.predictActivityState();
+            outputCoordinator %= rateDivisor;
 
-        if (predictedState != UserActivities.INCORRECT) {
-            ActivitySimulator.outputDetectedActivity(predictedState);
+            if (predictedState != UserActivities.INCORRECT) {
+                ActivitySimulator.outputDetectedActivity(predictedState);
+            }
         }
     }
 
@@ -329,12 +333,15 @@ public class ActivityDetection {
     private EventWindow magWindow;
     private EventWindow lightWindow;
     private EventWindow locWindow;
+    
+    private int outputCoordinator = 0;
+    private int rateDivisor = 1;
 
     public ActivityDetection() {
 
-        oracle = new ActivityOracle(1195, 0.861);
+        oracle = new ActivityOracle(1195 / rateDivisor, 0.861);
         //ioOracle = new IdleActivityOracle(735, 0.677);
-        ioOracle = new IdleActivityOracle(735, 0.677);
+        ioOracle = new IdleActivityOracle(735 / rateDivisor, 0.677);
 
         oracle.setIdleActivityOracle(ioOracle);
 

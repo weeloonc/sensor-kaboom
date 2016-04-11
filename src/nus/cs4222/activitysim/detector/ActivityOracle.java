@@ -134,7 +134,6 @@ public class ActivityOracle {
     public UserActivities predictActivityState() {
 
         if (idleCount > confidenceThreshold) {
-            ioOracle.pushActivityState(ioOracle.ioEvaluator());
             return ioOracle.predictActivityState();
         } else if (walkingCount > confidenceThreshold) {
             return UserActivities.WALKING;
