@@ -155,12 +155,13 @@ public class ActivityDetection {
             ioOracle.pushActivityState(ioOracle.ioEvaluator());
 
             UserActivities predictedState = oracle.predictActivityState();
-            outputCoordinator %= rateDivisor;
 
             if (predictedState != UserActivities.INCORRECT) {
                 ActivitySimulator.outputDetectedActivity(predictedState);
             }
         }
+
+        outputCoordinator %= rateDivisor;
     }
 
     /**
@@ -346,7 +347,7 @@ public class ActivityDetection {
     private EventWindow locWindow;
     
     private int outputCoordinator = 0;
-    private int rateDivisor = 1;
+    private int rateDivisor = 2;
 
     public ActivityDetection() {
 
