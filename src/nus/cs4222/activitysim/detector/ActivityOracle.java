@@ -53,7 +53,7 @@ public class ActivityOracle {
 
     public UserActivities evaluateUserActivity() {
 
-        boolean isIdle = sensorActivities.get(Sensor.TYPE_LINEAR_ACCELERATION) <= SENSOR_ACTIVITY_MID
+        boolean isIdle = sensorActivities.get(Sensor.TYPE_LINEAR_ACCELERATION) <= SENSOR_ACTIVITY_LOW
                 && sensorActivities.get(Sensor.TYPE_MAGNETIC_FIELD) == SENSOR_ACTIVITY_LOW
                 && (usingGpsProvider ? sensorActivities.get(LocationSensor.TYPE_LOCATION) == SENSOR_ACTIVITY_LOW : true);
 
