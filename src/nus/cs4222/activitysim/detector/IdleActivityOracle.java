@@ -9,10 +9,11 @@ import nus.cs4222.activitysim.UserActivities;
 public class IdleActivityOracle {
 
     public static final int LIGHTSENSOR_ACTIVITY_LOW = 0;
-    public static final int LIGHTSENSOR_ACTIVITY_HIGH = 1;
+    public static final int LIGHTSENSOR_ACTIVITY_MID = 1;
+    public static final int LIGHTSENSOR_ACTIVITY_HIGH = 2;
 
     public static final int PROXIMITY_LOW = 0;
-    public static final int PROXIMITY_HIGH = 1;
+    public static final int PROXIMITY_HIGH = 2;
 
     public static final int GPS_SIGNAL_HIGH = 1;
     public static final int GPS_SIGNAL_LOW = 0;
@@ -51,20 +52,22 @@ public class IdleActivityOracle {
         boolean isIndoor, isOutdoor;
         // if(lightActivity.get(Sensor.TYPE_PROXIMITY) == PROXIMITY_HIGH){
         isOutdoor = lightActivity.get(Sensor.TYPE_LIGHT) == LIGHTSENSOR_ACTIVITY_HIGH;
-        if (isOutdoor && usingGpsProvider) {
+        if (isOutdoor/* && usingGpsProvider*/) {
+            return UserActivities.IDLE_OUTDOOR;
+        }else if (isOutdoor && lightActivity.get(Sensor.TYPE_MAGNETIC_FIELD) == LIGHTSENSOR_ACTIVITY_HIGH /*&& usingGpsProvider*/
+                /*&& lightActivity.get(LocationSensor.TYPE_LOCATION) == LocationSensor.GPS_SPEED_LOW*/) {
             return UserActivities.IDLE_OUTDOOR;
         }
 
-        if (lightActivity.get(Sensor.TYPE_MAGNETIC_FIELD) == LIGHTSENSOR_ACTIVITY_HIGH && usingGpsProvider
-                && lightActivity.get(LocationSensor.TYPE_LOCATION) == LocationSensor.GPS_SPEED_LOW) {
-            return UserActivities.IDLE_OUTDOOR;
-
-        } else if (lightActivity.get(Sensor.TYPE_MAGNETIC_FIELD) == LIGHTSENSOR_ACTIVITY_LOW && !usingGpsProvider
-                && lightActivity.get(LocationSensor.TYPE_LOCATION) == LocationSensor.GPS_SPEED_LOW) {
+        if(!usingGpsProvider && lightActivity.get(Sensor.TYPE_PROXIMITY) == PROXIMITY_HIGH &&
+                lightActivity.get(Sensor.TYPE_LIGHT) == LIGHTSENSOR_ACTIVITY_MID){
+            return UserActivities.IDLE_INDOOR;
+        } else if (lightActivity.get(Sensor.TYPE_MAGNETIC_FIELD) == LIGHTSENSOR_ACTIVITY_LOW /*&& !usingGpsProvider*/
+                /*&& lightActivity.get(LocationSensor.TYPE_LOCATION) == LocationSensor.GPS_SPEED_LOW*/) {
             return UserActivities.IDLE_INDOOR;
 
         } else {
-            return UserActivities.OTHER;
+            return UserActivities.IDLE_OUTDOOR;
         }
     }
 

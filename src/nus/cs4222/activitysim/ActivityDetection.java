@@ -268,9 +268,11 @@ public class ActivityDetection {
 
         double value = lightWindow.pushValue(light).getMean();
 
-        if (value < 1000.0) {
+        if (value < 10) {
             ioOracle.setLightActivity(Sensor.TYPE_LIGHT, IdleActivityOracle.LIGHTSENSOR_ACTIVITY_LOW);
-        } else {
+        } else if (value > 10 && value < 1000.0){
+            ioOracle.setLightActivity(Sensor.TYPE_LIGHT, IdleActivityOracle.LIGHTSENSOR_ACTIVITY_MID);
+        }else {
             ioOracle.setLightActivity(Sensor.TYPE_LIGHT, IdleActivityOracle.LIGHTSENSOR_ACTIVITY_HIGH);
         }
     }
@@ -286,6 +288,12 @@ public class ActivityDetection {
      *            Accuracy of the sensor data (you can ignore this)
      */
     public void onProximitySensorChanged(long timestamp, float proximity, int accuracy) {
+        if(proximity > 0){
+            //phone is faced up
+            ioOracle.setLightActivity(Sensor.TYPE_PROXIMITY, ioOracle.PROXIMITY_HIGH );
+        } else{
+            ioOracle.setLightActivity(Sensor.TYPE_PROXIMITY, ioOracle.PROXIMITY_LOW );
+        }
 
     }
 
