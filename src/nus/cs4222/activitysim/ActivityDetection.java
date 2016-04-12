@@ -270,11 +270,11 @@ public class ActivityDetection {
 
         double value = lightWindow.pushValue(light).getMean();
 
-        if (value < 15) {
+        if (value < 22) {
             ioOracle.setLightActivity(Sensor.TYPE_LIGHT, IdleActivityOracle.LIGHTSENSOR_ACTIVITY_LOW);
-        } else if (value > 15 && value < 420.0){
+        } else if (value > 22 && value < 320.0){
             ioOracle.setLightActivity(Sensor.TYPE_LIGHT, IdleActivityOracle.LIGHTSENSOR_ACTIVITY_MID);
-        }else if (value < 1000){
+        }else if (value < 650){
             ioOracle.setLightActivity(Sensor.TYPE_LIGHT, IdleActivityOracle.LIGHTSENSOR_ACTIVITY_HIGH);
         } else {
             ioOracle.setLightActivity(Sensor.TYPE_LIGHT, IdleActivityOracle.LIGHTSENSOR_ACTIVITY_VERYHIGH);

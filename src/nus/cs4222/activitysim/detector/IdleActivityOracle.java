@@ -70,7 +70,8 @@ public class IdleActivityOracle {
         } else {
             return UserActivities.IDLE_OUTDOOR;
         }*/
-
+        if(usingGpsProvider && lightActivity.get(Sensor.TYPE_PROXIMITY) == PROXIMITY_HIGH && lightActivity.get(Sensor.TYPE_LIGHT) == LIGHTSENSOR_ACTIVITY_VERYHIGH)
+            return UserActivities.IDLE_OUTDOOR;
         if(/*!usingGpsProvider && */lightActivity.get(Sensor.TYPE_PROXIMITY) == PROXIMITY_HIGH
                 && lightActivity.get(Sensor.TYPE_LIGHT) <= LIGHTSENSOR_ACTIVITY_MID
                 /*&& lightActivity.get(LocationSensor.TYPE_LOCATION) == LocationSensor.GPS_SPEED_MID*/){
