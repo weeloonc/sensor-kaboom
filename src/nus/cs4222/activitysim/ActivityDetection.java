@@ -367,14 +367,15 @@ public class ActivityDetection {
     private EventWindow lightWindow;
     private EventWindow locWindow;
     
-    private int outputCoordinator = 2;
+    private int outputCoordinator = 5;
     private int rateDivisor = 8;
 
     public ActivityDetection() {
 
+        //oracle = new ActivityOracle(1195 / rateDivisor, 0.861);
         oracle = new ActivityOracle(1195 / rateDivisor, 0.861);
         //ioOracle = new IdleActivityOracle(735, 0.677);
-        ioOracle = new IdleActivityOracle(735 / rateDivisor, 0.677);
+        ioOracle = new IdleActivityOracle(735 / rateDivisor, 0.94);
 
         oracle.setIdleActivityOracle(ioOracle);
 
