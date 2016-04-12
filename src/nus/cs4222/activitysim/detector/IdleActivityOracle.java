@@ -11,6 +11,7 @@ public class IdleActivityOracle {
     public static final int LIGHTSENSOR_ACTIVITY_LOW = 0;
     public static final int LIGHTSENSOR_ACTIVITY_MID = 1;
     public static final int LIGHTSENSOR_ACTIVITY_HIGH = 2;
+    public static final int LIGHTSENSOR_ACTIVITY_VERYHIGH = 3;
 
     public static final int PROXIMITY_LOW = 0;
     public static final int PROXIMITY_HIGH = 2;
@@ -69,17 +70,29 @@ public class IdleActivityOracle {
         } else {
             return UserActivities.IDLE_OUTDOOR;
         }*/
+
         if(/*!usingGpsProvider && */lightActivity.get(Sensor.TYPE_PROXIMITY) == PROXIMITY_HIGH
                 && lightActivity.get(Sensor.TYPE_LIGHT) <= LIGHTSENSOR_ACTIVITY_MID
                 /*&& lightActivity.get(LocationSensor.TYPE_LOCATION) == LocationSensor.GPS_SPEED_MID*/){
             return UserActivities.IDLE_INDOOR;
         } else if (lightActivity.get(Sensor.TYPE_PROXIMITY) == PROXIMITY_LOW
                 //&& lightActivity.get(Sensor.TYPE_MAGNETIC_FIELD) <= LIGHTSENSOR_ACTIVITY_MID
-                //&& lightActivity.get(Sensor.TYPE_LIGHT) == LIGHTSENSOR_ACTIVITY_LOW/*&& !usingGpsProvider*/
+                //&& lightActivity.get(Sensor.TYPE_LIGHT) == LIGHTSENSOR_ACTIVITY_LOW
+                && !usingGpsProvider
                 && lightActivity.get(LocationSensor.TYPE_LOCATION) == LocationSensor.GPS_SPEED_LOW) {
             return UserActivities.IDLE_INDOOR;
-
-        } else {
+        }
+        else if(!usingGpsProvider && lightActivity.get(Sensor.TYPE_PROXIMITY) == PROXIMITY_HIGH
+                && lightActivity.get(Sensor.TYPE_LIGHT) <= LIGHTSENSOR_ACTIVITY_HIGH
+                && lightActivity.get(Sensor.TYPE_LIGHT) >= LIGHTSENSOR_ACTIVITY_MID){
+            return UserActivities.IDLE_INDOOR;
+        }
+        /*else if(lightActivity.get(Sensor.TYPE_PROXIMITY) == PROXIMITY_LOW
+                && usingGpsProvider
+                && lightActivity.get(LocationSensor.TYPE_LOCATION) == LocationSensor.GPS_SPEED_MID  // case that there is GPS indoors but unstable location
+                *//*//**//*&& lightActivity.get(Sensor.TYPE_MAGNETIC_FIELD) <= LIGHTSENSOR_ACTIVITY_LOW*//*){
+            return UserActivities.IDLE_INDOOR;
+        }*/else{
             return UserActivities.IDLE_OUTDOOR;
         }
     }

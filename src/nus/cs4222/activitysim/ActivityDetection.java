@@ -130,7 +130,7 @@ public class ActivityDetection {
             oracle.setSensorActivity(Sensor.TYPE_LINEAR_ACCELERATION, ActivityOracle.SENSOR_ACTIVITY_HIGH);
         }*/
         if (value < 1.34) {
-            if(stdDev > 0.8)
+            if(stdDev > 0.76)
                 oracle.setSensorActivity(Sensor.TYPE_LINEAR_ACCELERATION, ActivityOracle.SENSOR_ACTIVITY_MID);
             else
                 oracle.setSensorActivity(Sensor.TYPE_LINEAR_ACCELERATION, ActivityOracle.SENSOR_ACTIVITY_LOW);
@@ -185,7 +185,7 @@ public class ActivityDetection {
 
         if (stdDev < 0.8) {
             oracle.setSensorActivity(Sensor.TYPE_MAGNETIC_FIELD, ActivityOracle.SENSOR_ACTIVITY_LOW);
-        } else if (stdDev < 1.7) {
+        } else if (stdDev < 3.7) {
             oracle.setSensorActivity(Sensor.TYPE_MAGNETIC_FIELD, ActivityOracle.SENSOR_ACTIVITY_MID);
         } else {
             oracle.setSensorActivity(Sensor.TYPE_MAGNETIC_FIELD, ActivityOracle.SENSOR_ACTIVITY_HIGH);
@@ -274,8 +274,10 @@ public class ActivityDetection {
             ioOracle.setLightActivity(Sensor.TYPE_LIGHT, IdleActivityOracle.LIGHTSENSOR_ACTIVITY_LOW);
         } else if (value > 15 && value < 420.0){
             ioOracle.setLightActivity(Sensor.TYPE_LIGHT, IdleActivityOracle.LIGHTSENSOR_ACTIVITY_MID);
-        }else {
+        }else if (value < 1000){
             ioOracle.setLightActivity(Sensor.TYPE_LIGHT, IdleActivityOracle.LIGHTSENSOR_ACTIVITY_HIGH);
+        } else {
+            ioOracle.setLightActivity(Sensor.TYPE_LIGHT, IdleActivityOracle.LIGHTSENSOR_ACTIVITY_VERYHIGH);
         }
     }
 
@@ -333,18 +335,27 @@ public class ActivityDetection {
         }
 
         double speedInKmh = getSpeedInKmh(mean);
-
-        if (speedInKmh <= 1.08) {
+        //System.out.println(new Date(ActivitySimulator.currentTimeMillis()) + ": " + speedInKmh );
+        if (speedInKmh <= 1.09) {
         //if (speedInKmh <= 0.7) {
             ioOracle.setLightActivity(LocationSensor.TYPE_LOCATION, LocationSensor.GPS_SPEED_LOW);
             oracle.setSensorActivity(LocationSensor.TYPE_LOCATION, ActivityOracle.SENSOR_ACTIVITY_LOW);
-        } else if (speedInKmh <= 1.32) {
+        } else if (speedInKmh <= 7) {
             ioOracle.setLightActivity(LocationSensor.TYPE_LOCATION, LocationSensor.GPS_SPEED_MID);
             oracle.setSensorActivity(LocationSensor.TYPE_LOCATION, ActivityOracle.SENSOR_ACTIVITY_MID);
         } else {
             ioOracle.setLightActivity(LocationSensor.TYPE_LOCATION, LocationSensor.GPS_SPEED_HIGH);
             oracle.setSensorActivity(LocationSensor.TYPE_LOCATION, ActivityOracle.SENSOR_ACTIVITY_HIGH);
         }
+
+      /*  if (speedInKmh <= 0.05) {
+            //if (speedInKmh <= 0.7) {
+            ioOracle.setLightActivity(LocationSensor.TYPE_LOCATION, LocationSensor.GPS_SPEED_LOW);
+        } else if (speedInKmh <= 0.6) {
+            ioOracle.setLightActivity(LocationSensor.TYPE_LOCATION, LocationSensor.GPS_SPEED_MID);
+        } else {
+            ioOracle.setLightActivity(LocationSensor.TYPE_LOCATION, LocationSensor.GPS_SPEED_HIGH);
+        }*/
     }
 
     private ActivityOracle oracle;
