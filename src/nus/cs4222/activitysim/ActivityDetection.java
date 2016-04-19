@@ -1,7 +1,5 @@
 package nus.cs4222.activitysim;
 
-import java.util.*;
-
 import android.hardware.*;
 import android.location.*;
 import nus.cs4222.activitysim.detector.*;
@@ -46,26 +44,15 @@ import nus.cs4222.activitysim.detector.*;
 public class ActivityDetection {
 
     /** Initialises the detection algorithm. */
-    public void initDetection() 
-        throws Exception {
+    public void initDetection() throws Exception {
         // Add initialisation code here, if any
-
-        // Here, we just show a dummy example of a timer that runs every 10 min, 
-        //  outputting WALKING and INDOOR alternatively.
-        // You will most likely not need to use Timers at all, it is just 
-        //  provided for convenience if you require.
-        // REMOVE THIS DUMMY CODE (2 lines below), otherwise it will mess up your algorithm's output
-       /* SimulatorTimer timer = new SimulatorTimer();
-        timer.schedule( this.task ,        // Task to be executed
-                        10 * 60 * 1000 );  // Delay in millisec (10 min)*/
     }
 
     /** De-initialises the detection algorithm. */
-    public void deinitDetection() 
-        throws Exception {
+    public void deinitDetection() throws Exception {
         // Add de-initialisation code here, if any
     }
-    
+
     /**
      * Called when the accelerometer sensor has changed.
      * 
@@ -122,32 +109,17 @@ public class ActivityDetection {
         double value = linAcclWindowMean.pushValue(valueRaw).getMean();
         double stdDev = linAcclWindowStdDev.pushValue(valueRaw).getStdDevP();
 
-       /* if (value < 1.2) {
-            oracle.setSensorActivity(Sensor.TYPE_LINEAR_ACCELERATION, ActivityOracle.SENSOR_ACTIVITY_LOW);
-        } else if (stdDev < 0.9) {
-            oracle.setSensorActivity(Sensor.TYPE_LINEAR_ACCELERATION, ActivityOracle.SENSOR_ACTIVITY_MID);
-        } else {
-            oracle.setSensorActivity(Sensor.TYPE_LINEAR_ACCELERATION, ActivityOracle.SENSOR_ACTIVITY_HIGH);
-        }*/
         if (value < 1.34) {
-            if(stdDev > 0.76)
+            if (stdDev > 0.76) {
                 oracle.setSensorActivity(Sensor.TYPE_LINEAR_ACCELERATION, ActivityOracle.SENSOR_ACTIVITY_MID);
-            else
+            } else {
                 oracle.setSensorActivity(Sensor.TYPE_LINEAR_ACCELERATION, ActivityOracle.SENSOR_ACTIVITY_LOW);
-        }else if ( stdDev < 0.76) {
+            }
+        } else if (stdDev < 0.76) {
             oracle.setSensorActivity(Sensor.TYPE_LINEAR_ACCELERATION, ActivityOracle.SENSOR_ACTIVITY_MID);
         } else {
             oracle.setSensorActivity(Sensor.TYPE_LINEAR_ACCELERATION, ActivityOracle.SENSOR_ACTIVITY_HIGH);
         }
-        /*if (value < 0.9 && stdDev < 0.5) {
-            oracle.setSensorActivity(Sensor.TYPE_LINEAR_ACCELERATION, ActivityOracle.SENSOR_ACTIVITY_LOW);
-        } else if (value < 1.1 && stdDev < 0.9) {
-            oracle.setSensorActivity(Sensor.TYPE_LINEAR_ACCELERATION, ActivityOracle.SENSOR_ACTIVITY_MID);
-        } *//*else if (value > 1 && stdDev > 0.7) {
-            oracle.setSensorActivity(Sensor.TYPE_LINEAR_ACCELERATION, ActivityOracle.SENSOR_ACTIVITY_MID);
-        }*//* else {
-            oracle.setSensorActivity(Sensor.TYPE_LINEAR_ACCELERATION, ActivityOracle.SENSOR_ACTIVITY_HIGH);
-        }*/
 
         if (outputCoordinator++ == 0) {
             UserActivities currentState = oracle.evaluateUserActivity();
@@ -194,7 +166,7 @@ public class ActivityDetection {
         // Light detector
         if (stdDev <= 0.5) {
             ioOracle.setLightActivity(Sensor.TYPE_MAGNETIC_FIELD, IdleActivityOracle.LIGHTSENSOR_ACTIVITY_LOW);
-        } else  if (stdDev <= 1) {
+        } else if (stdDev <= 1) {
             ioOracle.setLightActivity(Sensor.TYPE_MAGNETIC_FIELD, IdleActivityOracle.LIGHTSENSOR_ACTIVITY_MID);
         } else {
             ioOracle.setLightActivity(Sensor.TYPE_MAGNETIC_FIELD, IdleActivityOracle.LIGHTSENSOR_ACTIVITY_HIGH);
@@ -272,9 +244,9 @@ public class ActivityDetection {
 
         if (value < 22) {
             ioOracle.setLightActivity(Sensor.TYPE_LIGHT, IdleActivityOracle.LIGHTSENSOR_ACTIVITY_LOW);
-        } else if (value > 22 && value < 320.0){
+        } else if (value > 22 && value < 320.0) {
             ioOracle.setLightActivity(Sensor.TYPE_LIGHT, IdleActivityOracle.LIGHTSENSOR_ACTIVITY_MID);
-        }else if (value < 650){
+        } else if (value < 650) {
             ioOracle.setLightActivity(Sensor.TYPE_LIGHT, IdleActivityOracle.LIGHTSENSOR_ACTIVITY_HIGH);
         } else {
             ioOracle.setLightActivity(Sensor.TYPE_LIGHT, IdleActivityOracle.LIGHTSENSOR_ACTIVITY_VERYHIGH);
@@ -292,13 +264,12 @@ public class ActivityDetection {
      *            Accuracy of the sensor data (you can ignore this)
      */
     public void onProximitySensorChanged(long timestamp, float proximity, int accuracy) {
-        if(proximity > 0){
-            //phone is faced up
-            ioOracle.setLightActivity(Sensor.TYPE_PROXIMITY, ioOracle.PROXIMITY_HIGH );
-        } else{
-            ioOracle.setLightActivity(Sensor.TYPE_PROXIMITY, ioOracle.PROXIMITY_LOW );
-        }
 
+        if (proximity > 0) { // phone is faced up
+            ioOracle.setLightActivity(Sensor.TYPE_PROXIMITY, IdleActivityOracle.PROXIMITY_HIGH);
+        } else {
+            ioOracle.setLightActivity(Sensor.TYPE_PROXIMITY, IdleActivityOracle.PROXIMITY_LOW);
+        }
     }
 
     /**
@@ -325,7 +296,7 @@ public class ActivityDetection {
             float accuracy, double altitude, float bearing, float speed) {
 
         double mean;
-        
+
         if (provider.equals(LocationManager.GPS_PROVIDER)) {
             oracle.setGpsProvider(true);
             mean = locWindow.pushValue(speed).getMean();
@@ -335,9 +306,8 @@ public class ActivityDetection {
         }
 
         double speedInKmh = getSpeedInKmh(mean);
-        //System.out.println(new Date(ActivitySimulator.currentTimeMillis()) + ": " + speedInKmh );
+
         if (speedInKmh <= 1.09) {
-        //if (speedInKmh <= 0.7) {
             ioOracle.setLightActivity(LocationSensor.TYPE_LOCATION, LocationSensor.GPS_SPEED_LOW);
             oracle.setSensorActivity(LocationSensor.TYPE_LOCATION, ActivityOracle.SENSOR_ACTIVITY_LOW);
         } else if (speedInKmh <= 7) {
@@ -347,15 +317,6 @@ public class ActivityDetection {
             ioOracle.setLightActivity(LocationSensor.TYPE_LOCATION, LocationSensor.GPS_SPEED_HIGH);
             oracle.setSensorActivity(LocationSensor.TYPE_LOCATION, ActivityOracle.SENSOR_ACTIVITY_HIGH);
         }
-
-      /*  if (speedInKmh <= 0.05) {
-            //if (speedInKmh <= 0.7) {
-            ioOracle.setLightActivity(LocationSensor.TYPE_LOCATION, LocationSensor.GPS_SPEED_LOW);
-        } else if (speedInKmh <= 0.6) {
-            ioOracle.setLightActivity(LocationSensor.TYPE_LOCATION, LocationSensor.GPS_SPEED_MID);
-        } else {
-            ioOracle.setLightActivity(LocationSensor.TYPE_LOCATION, LocationSensor.GPS_SPEED_HIGH);
-        }*/
     }
 
     private ActivityOracle oracle;
@@ -366,22 +327,19 @@ public class ActivityDetection {
     private EventWindow magWindow;
     private EventWindow lightWindow;
     private EventWindow locWindow;
-    
+
     private int outputCoordinator = 5;
     private int rateDivisor = 8;
 
     public ActivityDetection() {
 
-        //oracle = new ActivityOracle(1195 / rateDivisor, 0.861);
         oracle = new ActivityOracle(1195 / rateDivisor, 0.861);
-        //ioOracle = new IdleActivityOracle(735, 0.677);
         ioOracle = new IdleActivityOracle(735 / rateDivisor, 0.94);
 
         oracle.setIdleActivityOracle(ioOracle);
 
         linAcclWindowMean = new EventWindow(60);
         linAcclWindowStdDev = new EventWindow(130);
-        //magWindow = new EventWindow(70);
         magWindow = new EventWindow(80);
         lightWindow = new EventWindow(5);
         locWindow = new EventWindow(7);

@@ -28,7 +28,6 @@ public class IdleActivityOracle {
     private int index;
     private int indoorCount;
     private int outdoorCount;
-    private int otherCount;
     private int stateCount;
 
     public IdleActivityOracle(int windowSize, double confidencePercentage) {
@@ -50,50 +49,25 @@ public class IdleActivityOracle {
     }
 
     public UserActivities ioEvaluator() {
-        boolean isIndoor, isOutdoor;
-        // if(lightActivity.get(Sensor.TYPE_PROXIMITY) == PROXIMITY_HIGH){
-      /*  isOutdoor = lightActivity.get(Sensor.TYPE_LIGHT) == LIGHTSENSOR_ACTIVITY_HIGH;
-        if (isOutdoor && usingGpsProvider) {
-            return UserActivities.IDLE_OUTDOOR;
-        }else if (isOutdoor && lightActivity.get(Sensor.TYPE_MAGNETIC_FIELD) == LIGHTSENSOR_ACTIVITY_HIGH *//*&& usingGpsProvider*//*
-                *//*&& lightActivity.get(LocationSensor.TYPE_LOCATION) == LocationSensor.GPS_SPEED_LOW*//*) {
-            return UserActivities.IDLE_OUTDOOR;
-        }*/
 
-        /*if(!usingGpsProvider && lightActivity.get(Sensor.TYPE_PROXIMITY) == PROXIMITY_HIGH &&
-                lightActivity.get(Sensor.TYPE_LIGHT) == LIGHTSENSOR_ACTIVITY_MID){
+        if (usingGpsProvider && lightActivity.get(Sensor.TYPE_PROXIMITY) == PROXIMITY_HIGH
+                && lightActivity.get(Sensor.TYPE_LIGHT) == LIGHTSENSOR_ACTIVITY_VERYHIGH) {
+            return UserActivities.IDLE_OUTDOOR;
+
+        } else if (lightActivity.get(Sensor.TYPE_PROXIMITY) == PROXIMITY_HIGH
+                && lightActivity.get(Sensor.TYPE_LIGHT) <= LIGHTSENSOR_ACTIVITY_MID) {
             return UserActivities.IDLE_INDOOR;
-        } else if (lightActivity.get(Sensor.TYPE_MAGNETIC_FIELD) == LIGHTSENSOR_ACTIVITY_LOW *//*&& !usingGpsProvider*//*
-                *//*&& lightActivity.get(LocationSensor.TYPE_LOCATION) == LocationSensor.GPS_SPEED_LOW*//*) {
+
+        } else if (lightActivity.get(Sensor.TYPE_PROXIMITY) == PROXIMITY_LOW && !usingGpsProvider
+                && lightActivity.get(LocationSensor.TYPE_LOCATION) == LocationSensor.GPS_SPEED_LOW) {
+            return UserActivities.IDLE_INDOOR;
+
+        } else if (!usingGpsProvider && lightActivity.get(Sensor.TYPE_PROXIMITY) == PROXIMITY_HIGH
+                && lightActivity.get(Sensor.TYPE_LIGHT) <= LIGHTSENSOR_ACTIVITY_HIGH
+                && lightActivity.get(Sensor.TYPE_LIGHT) >= LIGHTSENSOR_ACTIVITY_MID) {
             return UserActivities.IDLE_INDOOR;
 
         } else {
-            return UserActivities.IDLE_OUTDOOR;
-        }*/
-        if(usingGpsProvider && lightActivity.get(Sensor.TYPE_PROXIMITY) == PROXIMITY_HIGH && lightActivity.get(Sensor.TYPE_LIGHT) == LIGHTSENSOR_ACTIVITY_VERYHIGH)
-            return UserActivities.IDLE_OUTDOOR;
-        if(/*!usingGpsProvider && */lightActivity.get(Sensor.TYPE_PROXIMITY) == PROXIMITY_HIGH
-                && lightActivity.get(Sensor.TYPE_LIGHT) <= LIGHTSENSOR_ACTIVITY_MID
-                /*&& lightActivity.get(LocationSensor.TYPE_LOCATION) == LocationSensor.GPS_SPEED_MID*/){
-            return UserActivities.IDLE_INDOOR;
-        } else if (lightActivity.get(Sensor.TYPE_PROXIMITY) == PROXIMITY_LOW
-                //&& lightActivity.get(Sensor.TYPE_MAGNETIC_FIELD) <= LIGHTSENSOR_ACTIVITY_MID
-                //&& lightActivity.get(Sensor.TYPE_LIGHT) == LIGHTSENSOR_ACTIVITY_LOW
-                && !usingGpsProvider
-                && lightActivity.get(LocationSensor.TYPE_LOCATION) == LocationSensor.GPS_SPEED_LOW) {
-            return UserActivities.IDLE_INDOOR;
-        }
-        else if(!usingGpsProvider && lightActivity.get(Sensor.TYPE_PROXIMITY) == PROXIMITY_HIGH
-                && lightActivity.get(Sensor.TYPE_LIGHT) <= LIGHTSENSOR_ACTIVITY_HIGH
-                && lightActivity.get(Sensor.TYPE_LIGHT) >= LIGHTSENSOR_ACTIVITY_MID){
-            return UserActivities.IDLE_INDOOR;
-        }
-        /*else if(lightActivity.get(Sensor.TYPE_PROXIMITY) == PROXIMITY_LOW
-                && usingGpsProvider
-                && lightActivity.get(LocationSensor.TYPE_LOCATION) == LocationSensor.GPS_SPEED_MID  // case that there is GPS indoors but unstable location
-                *//*//**//*&& lightActivity.get(Sensor.TYPE_MAGNETIC_FIELD) <= LIGHTSENSOR_ACTIVITY_LOW*//*){
-            return UserActivities.IDLE_INDOOR;
-        }*/else{
             return UserActivities.IDLE_OUTDOOR;
         }
     }
@@ -119,9 +93,6 @@ public class IdleActivityOracle {
             case IDLE_OUTDOOR:
                 outdoorCount--;
                 break;
-            case OTHER:
-                otherCount--;
-                break;
             default:
                 throw new AssertionError("Should not happen");
             }
@@ -130,10 +101,9 @@ public class IdleActivityOracle {
         switch (state) {
         case IDLE_INDOOR:
             indoorCount++;
+            break;
         case IDLE_OUTDOOR:
             outdoorCount++;
-        case OTHER:
-            otherCount++;
             break;
         default:
             throw new AssertionError("Should not happen");
@@ -150,9 +120,4 @@ public class IdleActivityOracle {
             return UserActivities.INCORRECT;
         }
     }
-
-    // on Proximity change, tells IODetector to read from LightSensor
-    // if LightSensor > 1000, mag std dev < 1, output IDLE_Outdoor
-    // if lightsensor < 1000, mag std dev > 1, output IDLE_Indoor
-
 }
